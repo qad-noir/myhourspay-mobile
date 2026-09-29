@@ -1,0 +1,198 @@
+openapi: 3.1.0
+info:
+  title: MHP mobile integration draft
+  version: 0.1.0-draft
+  description: >-
+    Source-inspected subset, NOT an agreed or runtime-verified mobile contract.
+    Existing operations retain paid api_access restrictions. Proposed auth operations
+    do not exist and must not be used by a production client. No production test server.
+x-source-commit: f1f63b8e13079d649dc60d1e4f09e0132d1a4ede
+x-source-repository: 'C:/Users/HP-MC/Documents/laravel/myhourspay'
+servers:
+  - url: http://localhost:8000
+    description: Illustrative local development only; verify running service first
+security:
+  - sanctum: []
+paths:
+  /api/v1/workspaces:
+    get:
+      operationId: listExistingWorkspaces
+      x-implementation-status: existing-source-inspected
+      description: Requires active account, trial choice and paid api_access. Returns model serialization including possible pivot fields.
+      responses:
+        '200':
+          description: Member workspaces
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Workspace'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /api/v1/workspaces/{workspace}/hours:
+    parameters:
+      - name: workspace
+        in: path
+        required: true
+        schema: {type: integer}
+    get:
+      operationId: listExistingHours
+      x-implementation-status: existing-source-inspected
+      description: Current user's records only, descending work_date. Laravel paginator, no custom sort. Dates inclusive.
+      parameters:
+        - name: start
+          in: query
+          schema: {type: string, format: date}
+        - name: end
+          in: query
+          schema: {type: string, format: date}
+        - name: per_page
+          in: query
+          schema: {type: integer, minimum: 1, maximum: 100, default: 50}
+        - name: page
+          in: query
+          schema: {type: integer, minimum: 1}
+      responses:
+        '200':
+          description: Laravel paginator; model fields beyond this subset remain uncontracted
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, current_page, last_page]
+                properties:
+                  data:
+                    type: array
+                    items: {$ref: '#/components/schemas/HoursEntry'}
+                  current_page: {type: integer}
+                  last_page: {type: integer}
+        '401': {$ref: '#/components/responses/Unauthenticated'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {description: Workspace unavailable or nonmember}
+        '422': {description: Laravel validation errors}
+    post:
+      operationId: createExistingHours
+      x-implementation-status: existing-source-inspected
+      description: >-
+        Requires membership and hours:write token ability as well as route middleware.
+        One date per user/workspace. No overnight shifts. No idempotency protection;
+        never automatically retry. Approved/locked week returns 409.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/HoursInput'}
+      responses:
+        '201':
+          description: Newly created model; calculation observer must be runtime-verified
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data: {$ref: '#/components/schemas/HoursEntry'}
+        '401': {$ref: '#/components/responses/Unauthenticated'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {description: Workspace unavailable or nonmember}
+        '409': {description: Approved or locked week; current response has no stable error code}
+        '422': {description: Field validation including duplicate work_date}
+        '429': {description: Premium API throttle; inspect Retry-After}
+  /api/v1/mobile/auth/login:
+    post:
+      operationId: proposedMobileLogin
+      x-implementation-status: proposed-not-implemented
+      security: []
+      description: >-
+        Proposal only. Validate account and password through shared actions; do not
+        issue a normal token until MFA and account gates are satisfied.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password, device_name]
+              properties:
+                email: {type: string, format: email}
+                password: {type: string, format: password, writeOnly: true}
+                device_name: {type: string, maxLength: 100}
+      responses:
+        '200':
+          description: Proposed discriminated authentication response; requires backend agreement
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - type: object
+                    required: [state, token, expires_at]
+                    properties:
+                      state: {const: authenticated}
+                      token: {type: string, description: Opaque Sanctum bearer token, not JWT}
+                      expires_at: {type: string, format: date-time}
+                  - type: object
+                    required: [state, challenge, expires_at]
+                    properties:
+                      state: {enum: [two_factor_required, verification_required, onboarding_required]}
+                      challenge: {type: string, description: Restricted single-use challenge, not general API access}
+                      expires_at: {type: string, format: date-time}
+        '401': {$ref: '#/components/responses/Unauthenticated'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '429': {description: Rate limited with Retry-After}
+components:
+  securitySchemes:
+    sanctum:
+      type: http
+      scheme: bearer
+      description: Opaque Laravel Sanctum token. Expiry is not agreed for mobile.
+  responses:
+    Unauthenticated:
+      description: Missing, expired or revoked credentials; reauthenticate, no refresh endpoint
+    Forbidden:
+      description: Permission, account or entitlement restriction; do not automatically log out
+  schemas:
+    Workspace:
+      type: object
+      required: [id, name]
+      properties:
+        id: {type: integer}
+        name: {type: string}
+        currency: {type: [string, 'null']}
+        weekly_target_minutes: {type: [integer, 'null']}
+    HoursInput:
+      type: object
+      required: [work_date, start_time, end_time, break_minutes, break_type]
+      properties:
+        work_date: {type: string, format: date}
+        start_time: {type: string, pattern: '^([01][0-9]|2[0-3]):[0-5][0-9]$'}
+        end_time: {type: string, pattern: '^([01][0-9]|2[0-3]):[0-5][0-9]$'}
+        break_minutes: {type: integer, minimum: 0, maximum: 1439}
+        break_type: {type: string, enum: [paid, unpaid]}
+        project_id: {type: [integer, 'null']}
+        billable: {type: [boolean, 'null']}
+        notes: {type: [string, 'null'], maxLength: 5000}
+      example:
+        work_date: '2026-09-28'
+        start_time: '09:00'
+        end_time: '17:00'
+        break_minutes: 30
+        break_type: unpaid
+    HoursEntry:
+      type: object
+      description: Incomplete existing model serialization; migrate to explicit Resources before freezing.
+      required: [id, work_date, start_time, end_time, break_minutes, break_type]
+      properties:
+        id: {type: integer}
+        work_date: {type: string, format: date}
+        start_time: {type: string}
+        end_time: {type: string}
+        break_minutes: {type: integer}
+        break_type: {type: string, enum: [paid, unpaid]}
+        net_minutes: {type: [integer, 'null']}
