@@ -1,135 +1,328 @@
+import 'dart:async';
+import 'dart:convert';
+import 'dart:io';
+
 import 'package:flutter_test/flutter_test.dart';
+import 'package:http/testing.dart';
+import 'package:myhourspay/core/api_client.dart';
 import 'package:myhourspay/core/api_environment.dart';
+import 'package:myhourspay/core/session_store.dart';
+import 'package:myhourspay/features/auth/auth_repository.dart';
 import 'package:myhourspay/features/hours/models.dart';
 import 'package:myhourspay/features/hours/repository.dart';
 import 'package:myhourspay/features/session/session_model.dart';
-import 'package:myhourspay/main.dart';
-import 'package:flutter/material.dart';
+import 'package:timezone/data/latest.dart' as tz;
 
-HoursDraft draft(DateTime date, {String end = '17:00', int rest = 30}) =>
-    HoursDraft(
-      date: date,
-      start: '09:00',
-      end: end,
-      breakMinutes: rest,
-      paidBreak: false,
-      notes: '',
-    );
+import 'support/fixtures.dart';
+
 void main() {
-  test('configuration fails closed and trusts only an exact origin', () {
-    expect(ApiEnvironment.parse('demo', '').origin, isNull);
+  setUpAll(tz.initializeTimeZones);
+  final environment = ApiEnvironment.parse(
+    'development',
+    'http://localhost:8000/api/v1/mobile',
+  );
+  test('configuration fails closed and protects the API base', () {
     expect(() => ApiEnvironment.parse('', ''), throwsFormatException);
     expect(
-      () => ApiEnvironment.parse('production', 'http://example.test'),
+      () => ApiEnvironment.parse(
+        'development',
+        'https://mhp.glsltd.co.uk/api/v1/mobile',
+      ),
+      throwsFormatException,
+    );
+    expect(
+      () =>
+          ApiEnvironment.parse('staging', 'http://staging.test/api/v1/mobile'),
       throwsFormatException,
     );
     expect(
       () => ApiEnvironment.parse(
         'development',
-        'http://localhost',
+        'http://localhost/api/v1/mobile',
         release: true,
       ),
       throwsFormatException,
     );
-    final config = ApiEnvironment.parse('staging', 'https://example.test');
     expect(
-      config.trusts(Uri.parse('https://example.test/api/v1/workspaces')),
-      isTrue,
+      () => environment.endpoint('//evil.test', null),
+      throwsFormatException,
     );
     expect(
-      config.trusts(Uri.parse('https://example.test.attacker.test')),
+      () => environment.endpoint('/../outside', null),
+      throwsFormatException,
+    );
+    expect(
+      environment.trusts(Uri.parse('http://localhost:8000/api/user')),
       isFalse,
     );
-    expect(config.trusts(Uri.parse('https://example.test:8443')), isFalse);
   });
-  test('same-day validation rejects overnight and excessive breaks', () {
-    expect(
-      draft(DateTime(2026, 9, 28), end: '08:00').validate(),
-      contains('end'),
+  test('JSON headers, bearer confinement and redirect refusal', () async {
+    var calls = 0;
+    final api = ApiClient(
+      environment,
+      transport: MockClient((request) async {
+        calls++;
+        expect(request.headers['accept'], 'application/json');
+        expect(request.followRedirects, isFalse);
+        expect(request.headers['authorization'], 'Bearer test-secret');
+        return response(
+          {'code': 'redirect', 'message': 'Moved'},
+          302,
+          {'location': 'https://other.test'},
+        );
+      }),
+    )..token = 'test-secret';
+    await expectLater(
+      api.request('GET', '/me'),
+      throwsA(isA<ApiFailure>().having((e) => e.status, 'status', 302)),
     );
-    expect(
-      draft(DateTime(2026, 9, 28), rest: 480).validate(),
-      contains('break'),
+    expect(calls, 1);
+    api.close();
+  });
+  test('429 enforces Retry-After without another request', () async {
+    var calls = 0;
+    final api = ApiClient(
+      environment,
+      transport: MockClient((_) async {
+        calls++;
+        return response(
+          {'code': 'rate_limited', 'message': 'Wait'},
+          429,
+          {'retry-after': '60'},
+        );
+      }),
     );
-    expect(HoursDraft.clock('24:00'), isNull);
+    for (var i = 0; i < 2; i++) {
+      await expectLater(
+        api.request('GET', '/auth/providers', authenticated: false),
+        throwsA(
+          isA<ApiFailure>().having((e) => e.retryAt, 'retry time', isNotNull),
+        ),
+      );
+    }
+    expect(calls, 1);
+    api.close();
+  });
+  test('write timeout never automatically retries', () async {
+    var calls = 0;
+    final api = ApiClient(
+      environment,
+      timeout: const Duration(milliseconds: 5),
+      transport: MockClient((_) async {
+        calls++;
+        await Future<void>.delayed(const Duration(milliseconds: 50));
+        return response({});
+      }),
+    );
+    await expectLater(
+      api.request('POST', '/workspaces', body: {}),
+      throwsA(isA<ApiFailure>().having((e) => e.code, 'code', 'timeout')),
+    );
+    expect(calls, 1);
+    api.close();
+  });
+  test('MFA challenge is not stored or sent as bearer; verification replaces restricted token', () async {
+    final store = MemorySessionStore();
+    final api = ApiClient(
+      environment,
+      transport: MockClient((request) async {
+        switch (request.url.path.split('/mobile').last) {
+          case '/auth/login':
+            return response({
+              'status': 'two_factor_required',
+              'challenge_token': 'c' * 64,
+              'expires_at': DateTime.now()
+                  .add(const Duration(minutes: 5))
+                  .toIso8601String(),
+            });
+          case '/auth/two-factor':
+            expect(request.headers['authorization'], isNull);
+            expect(jsonDecode(request.body)['challenge_token'], 'c' * 64);
+            return response(
+              tokenResponse(
+                status: 'email_verification_required',
+                token: 'restricted',
+                verified: false,
+              ),
+            );
+          case '/auth/email/verify':
+            expect(request.headers['authorization'], 'Bearer restricted');
+            return response(tokenResponse(token: 'normal'));
+          case '/me':
+            return response({'data': user});
+          case '/workspaces':
+            return response({
+              'data': [workspace],
+            });
+          default:
+            throw StateError('Unexpected request');
+        }
+      }),
+    );
+    final model = SessionModel(
+      AuthRepository(api),
+      HoursRepository(api),
+      store,
+    );
+    await model.login('test@example.test', 'password', 'test');
+    expect(model.phase, SessionPhase.twoFactorChallenge);
+    expect(store.value, isNull);
+    expect(api.token, isNull);
+    await model.completeMfa('123456', false);
+    expect(model.phase, SessionPhase.verificationRequired);
+    expect(store.value?.token, 'restricted');
+    expect(model.workspaces, isEmpty);
+    await model.verify('123456');
+    expect(store.value?.token, 'normal');
+    expect(model.phase, SessionPhase.authenticated);
+    model.dispose();
   });
   test(
-    'calendar weeks cross year boundaries without elapsed-hour arithmetic',
-    () {
-      expect(dateKey(weekStart(DateTime(2027, 1, 1))), '2026-12-28');
+    'expired stored token clears before making an authenticated request',
+    () async {
+      final store = MemorySessionStore()
+        ..value = StoredSession('expired', DateTime(2000));
+      final api = ApiClient(
+        environment,
+        transport: MockClient((request) async {
+          expect(request.headers['authorization'], isNull);
+          return response({
+            'data': {'google': false, 'apple': false},
+          });
+        }),
+      );
+      final model = SessionModel(
+        AuthRepository(api),
+        HoursRepository(api),
+        store,
+      );
+      await model.restore();
+      expect(model.phase, SessionPhase.expired);
+      expect(store.value, isNull);
+      model.dispose();
     },
   );
-  test('workspace switching and logout isolate demo records', () async {
-    final model = SessionModel(DemoHoursRepository());
-    await model.enterDemo();
-    expect(model.phase, SessionPhase.authenticated);
-    await model.selectWorkspace(model.workspaces.first);
-    await model.add(draft(model.week));
-    expect(model.entries.single.netMinutes, 450);
-    await model.selectWorkspace(model.workspaces.last);
-    expect(model.entries, isEmpty);
-    model.logout();
-    expect(model.phase, SessionPhase.signedOut);
-    await model.enterDemo();
-    await model.selectWorkspace(model.workspaces.first);
-    expect(model.entries, isEmpty);
-  });
-  test('demo rejects duplicate dates and locked writes', () async {
-    final repository = DemoHoursRepository();
-    final entry = draft(DateTime(2026, 9, 28));
-    await repository.add(1, entry);
-    await expectLater(
-      repository.add(1, entry),
-      throwsA(
-        isA<AppFailure>().having((e) => e.code, 'code', 'validation_failed'),
+  test('403 feature rejection does not clear credentials, 401 does', () async {
+    var status = 403;
+    final store = MemorySessionStore()
+      ..value = StoredSession(
+        'active',
+        DateTime.now().add(const Duration(days: 1)),
+      );
+    final api = ApiClient(
+      environment,
+      transport: MockClient(
+        (_) async => response({
+          'code': status == 403 ? 'feature_unavailable' : 'unauthenticated',
+          'message': 'Denied',
+        }, status),
       ),
+    )..token = 'active';
+    final model = SessionModel(
+      AuthRepository(api),
+      HoursRepository(api),
+      store,
     );
-    repository.locked.add(2);
     await expectLater(
-      repository.add(2, entry),
-      throwsA(
-        isA<AppFailure>().having((e) => e.code, 'code', 'timesheet_locked'),
-      ),
+      api.request('GET', '/workspaces'),
+      throwsA(isA<ApiFailure>()),
     );
-  });
-  testWidgets('demo vertical slice adds a day and displays total', (
-    tester,
-  ) async {
-    await tester.pumpWidget(const MhpApp());
-    await tester.tap(find.text('Explore demo'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('My workspace'));
-    await tester.pumpAndSettle();
-    await tester.scrollUntilVisible(find.text('Add hours'), 300);
-    await tester.tap(find.text('Add hours'));
-    await tester.pumpAndSettle();
-    await tester.scrollUntilVisible(
-      find.text('Add to demo'),
-      300,
-      scrollable: find.byType(Scrollable).first,
+    expect(store.value, isNotNull);
+    status = 401;
+    await expectLater(
+      api.request('GET', '/workspaces'),
+      throwsA(isA<ApiFailure>()),
     );
-    await tester.drag(find.byType(ListView).last, const Offset(0, -400));
-    await tester.pumpAndSettle();
-    await tester.ensureVisible(find.text('Add to demo'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Add to demo'));
-    await tester.pumpAndSettle();
-    expect(find.text('Added to demo. Not saved to MHP.'), findsOneWidget);
-    await tester.scrollUntilVisible(find.text('Demo working hours'), -300);
-    expect(find.text('7h 30m'), findsWidgets);
-    expect(tester.takeException(), isNull);
+    await Future<void>.delayed(Duration.zero);
+    expect(store.value, isNull);
+    expect(model.phase, SessionPhase.expired);
+    model.dispose();
   });
-  testWidgets('welcome tolerates large text and narrow screens', (
-    tester,
-  ) async {
-    tester.view.physicalSize = const Size(320, 640);
-    tester.view.devicePixelRatio = 1;
-    addTearDown(tester.view.resetPhysicalSize);
-    addTearDown(tester.view.resetDevicePixelRatio);
-    tester.platformDispatcher.textScaleFactorTestValue = 2;
-    addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
-    await tester.pumpWidget(const MhpApp());
-    await tester.pumpAndSettle();
-    expect(tester.takeException(), isNull);
+  test('idempotent edits retain key and send version; changed payload gets a new key', () async {
+    final keys = <String>[];
+    final api = ApiClient(
+      environment,
+      transport: MockClient((request) async {
+        keys.add(request.headers['idempotency-key']!);
+        expect(request.method, 'PATCH');
+        expect(jsonDecode(request.body)['version'], 'a' * 64);
+        return response({'data': entry()});
+      }),
+    );
+    final repository = HoursRepository(api), mutation = MutationKey();
+    final original = HoursEntry.fromJson(entry());
+    HoursDraft draft(String note) => HoursDraft(
+      date: DateTime(2026, 9, 28),
+      start: '09:00',
+      end: '17:00',
+      breakMinutes: 30,
+      paidBreak: false,
+      notes: note,
+    );
+    await repository.save(1, draft('one'), mutation, existing: original);
+    await repository.save(1, draft('one'), mutation, existing: original);
+    await repository.save(1, draft('two'), mutation, existing: original);
+    expect(keys[0], keys[1]);
+    expect(keys[1], isNot(keys[2]));
+    api.close();
+  });
+  test(
+    'stale workspace response cannot replace new workspace records',
+    () async {
+      final pending = Completer<void>();
+      final api = ApiClient(
+        environment,
+        transport: MockClient((request) async {
+          if (request.url.path.contains('/workspaces/1/')) {
+            await pending.future;
+            return response(hoursPage([entry()]));
+          }
+          return response(hoursPage([]));
+        }),
+      );
+      final model = SessionModel(
+        AuthRepository(api),
+        HoursRepository(api),
+        MemorySessionStore(),
+      );
+      final old = model.selectWorkspace(Workspace.fromJson(workspace));
+      await model.selectWorkspace(Workspace.fromJson({...workspace, 'id': 2}));
+      pending.complete();
+      await old;
+      expect(model.workspace?.id, 2);
+      expect(model.page?.entries, isEmpty);
+      model.dispose();
+    },
+  );
+  test('validation follows contract limits and calendar weeks', () {
+    final draft = HoursDraft(
+      date: DateTime(2026),
+      start: '23:00',
+      end: '02:00',
+      breakMinutes: 30,
+      paidBreak: true,
+      notes: 'a' * 501,
+    );
+    expect(draft.validate(), contains('end_time'));
+    expect(draft.validate(), contains('notes'));
+    expect(dateKey(weekStart(DateTime(2027, 1, 1))), '2026-12-28');
+  });
+  test('pinned contract contains implemented shapes and operations', () {
+    final spec = jsonDecode(
+      File('docs/api/mobile.openapi.yaml').readAsStringSync(),
+    ) as Json;
+    expect(spec['info']['version'], '1.0.0');
+    expect(
+      spec['components']['schemas']['TokenResponse']['required'],
+      containsAll(['status', 'access_token']),
+    );
+    expect(
+      spec['paths']['/workspaces/{workspace}/hours/{entry}']['patch'],
+      isNotNull,
+    );
+    expect(
+      spec['components']['schemas']['HoursInput']['properties']['notes']['maxLength'],
+      500,
+    );
   });
 }

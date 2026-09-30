@@ -1,22 +1,75 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:timezone/data/latest.dart' as tz;
 
+import 'core/api_client.dart';
+import 'core/api_environment.dart';
+import 'core/secure_session_store.dart';
+import 'features/auth/auth_repository.dart';
+import 'features/auth/auth_screens.dart';
+import 'features/hours/hours_screen.dart';
 import 'features/hours/repository.dart';
 import 'features/session/session_model.dart';
-import 'features/hours/hours_screen.dart';
+import 'shared/widgets.dart';
 
-void main() => runApp(const MhpApp());
+void main() {
+  WidgetsFlutterBinding.ensureInitialized();
+  tz.initializeTimeZones();
+  try {
+    final config = ApiEnvironment.parse(
+      const String.fromEnvironment('APP_ENV'),
+      const String.fromEnvironment('API_BASE_URL'),
+      release: kReleaseMode,
+    );
+    final api = ApiClient(config);
+    runApp(
+      MhpApp(
+        model: SessionModel(
+          AuthRepository(api),
+          HoursRepository(api),
+          SecureSessionStore(config.base.toString()),
+        ),
+      ),
+    );
+  } on FormatException catch (error) {
+    runApp(
+      MaterialApp(
+        theme: mhpTheme(),
+        home: Scaffold(
+          body: PageBody(
+            children: [
+              const SizedBox(height: 64),
+              const Text('MHP setup required'),
+              const SizedBox(height: 16),
+              Text(error.message),
+              const Text(
+                'No API connection has been made. See docs/SETUP.md for local build configuration.',
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
 
 class MhpApp extends StatefulWidget {
-  const MhpApp({super.key});
+  const MhpApp({super.key, required this.model});
+  final SessionModel model;
   @override
   State<MhpApp> createState() => _MhpAppState();
 }
 
 class _MhpAppState extends State<MhpApp> {
-  final model = SessionModel(DemoHoursRepository());
+  @override
+  void initState() {
+    super.initState();
+    widget.model.restore();
+  }
+
   @override
   void dispose() {
-    model.dispose();
+    widget.model.dispose();
     super.dispose();
   }
 
@@ -24,18 +77,84 @@ class _MhpAppState extends State<MhpApp> {
   Widget build(BuildContext context) => MaterialApp(
     title: 'MyHoursPay',
     debugShowCheckedModeBanner: false,
-    theme: ThemeData(
-      useMaterial3: true,
-      colorScheme: ColorScheme.fromSeed(
-        seedColor: const Color(0xffb3421c),
-        primary: const Color(0xffb3421c),
-        surface: const Color(0xfffaf9fb),
-      ),
-      scaffoldBackgroundColor: const Color(0xfffaf9fb),
-      inputDecorationTheme: const InputDecorationTheme(
-        border: OutlineInputBorder(),
-      ),
+    theme: mhpTheme(),
+    home: ListenableBuilder(
+      listenable: widget.model,
+      builder: (context, _) {
+        final model = widget.model;
+        // Rebuild the navigator to discard private routes after logout or restriction.
+        final gate =
+            '${model.sessionRevision}:${model.phase}:${model.workspace?.id}';
+        return Navigator(
+          key: ValueKey(gate),
+          onGenerateRoute: (_) => MaterialPageRoute<void>(
+            builder: (_) => ListenableBuilder(
+              listenable: model,
+              builder: (context, _) => home(context, model),
+            ),
+          ),
+        );
+      },
     ),
-    home: HoursScreen(model: model),
   );
+  Widget home(BuildContext context, SessionModel model) =>
+      switch (model.phase) {
+        SessionPhase.signedOut ||
+        SessionPhase.expired => LoginScreen(model: model),
+        SessionPhase.twoFactorChallenge => ChallengeScreen(
+          model: model,
+          emailVerification: false,
+        ),
+        SessionPhase.verificationRequired => ChallengeScreen(
+          model: model,
+          emailVerification: true,
+        ),
+        SessionPhase.onboardingRequired || SessionPhase.authenticated =>
+          model.workspace == null
+              ? WorkspaceScreen(model: model)
+              : HoursScreen(model: model),
+        SessionPhase.restricted => Scaffold(
+          body: PageBody(
+            children: [
+              const SizedBox(height: 48),
+              Text(
+                'Account action required',
+                style: Theme.of(context).textTheme.headlineMedium,
+              ),
+              const Notice(
+                'Your account has a restriction that cannot be resolved in this app. Contact MHP support for help.',
+              ),
+              ErrorNotice(model.failure),
+              FilledButton(
+                onPressed: model.busy ? null : model.refreshAccount,
+                child: const Text('Check again'),
+              ),
+              TextButton(
+                onPressed: model.busy ? null : model.logout,
+                child: const Text('Sign out'),
+              ),
+            ],
+          ),
+        ),
+        SessionPhase.restoring => Scaffold(
+          body: PageBody(
+            children: [
+              const SizedBox(height: 64),
+              if (model.busy)
+                const Center(child: CircularProgressIndicator())
+              else ...[
+                ErrorNotice(model.failure),
+                FilledButton(
+                  onPressed: model.restore,
+                  child: const Text('Retry connection'),
+                ),
+                TextButton(
+                  onPressed: model.logout,
+                  child: const Text('Sign out on this device'),
+                ),
+              ],
+            ],
+          ),
+        ),
+      };
 }

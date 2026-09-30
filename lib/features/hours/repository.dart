@@ -1,83 +1,101 @@
+import 'dart:convert';
+
+import 'package:uuid/uuid.dart';
+
+import '../../core/api_client.dart';
 import 'models.dart';
 
-class AppFailure implements Exception {
-  const AppFailure(this.code, this.message, {this.fields = const {}});
-  final String code, message;
-  final Map<String, String> fields;
+/// Retain this object for an identical manual retry, including after a timeout.
+/// A changed payload is a new logical operation and receives a new UUID.
+class MutationKey {
+  String? _payload;
+  String? _key;
+  String forPayload(Object payload) {
+    final encoded = jsonEncode(payload);
+    if (_payload != encoded) {
+      _payload = encoded;
+      _key = const Uuid().v4();
+    }
+    return _key!;
+  }
 }
 
-abstract interface class HoursRepository {
-  Future<List<Workspace>> workspaces();
-  Future<List<HoursEntry>> week(int workspaceId, DateTime start);
-  Future<void> add(int workspaceId, HoursDraft draft);
-  void clear();
-}
-
-/// Contract-shaped, memory-only demonstration. Never contacts Laravel.
-class DemoHoursRepository implements HoursRepository {
-  final _entries = <int, List<HoursEntry>>{};
-  final locked = <int>{};
-  @override
-  Future<List<Workspace>> workspaces() async => const [
-    Workspace(1, 'My workspace'),
-    Workspace(2, 'Studio team'),
-  ];
-  @override
-  Future<List<HoursEntry>> week(int workspaceId, DateTime start) async =>
-      List.unmodifiable(
-        (_entries[workspaceId] ?? [])
-            .where(
-              (e) =>
-                  !e.date.isBefore(start) &&
-                  e.date.isBefore(
-                    DateTime(start.year, start.month, start.day + 7),
-                  ),
-            )
-            .toList()
-          ..sort((a, b) => a.date.compareTo(b.date)),
-      );
-  @override
-  Future<void> add(int workspaceId, HoursDraft draft) async {
-    if (locked.contains(workspaceId)) {
-      throw const AppFailure(
-        'timesheet_locked',
-        'This timesheet is locked. Reload before making changes.',
-      );
-    }
-    final errors = draft.validate();
-    if (errors.isNotEmpty) {
-      throw AppFailure(
-        'validation_failed',
-        'Check the highlighted fields.',
-        fields: errors,
-      );
-    }
-    final entries = _entries.putIfAbsent(workspaceId, () => []);
-    if (entries.any((e) => dateKey(e.date) == dateKey(draft.date))) {
-      throw const AppFailure(
-        'validation_failed',
-        'An entry already exists for this date.',
-      );
-    }
-    entries.add(
-      HoursEntry(
-        date: draft.date,
-        start: draft.start,
-        end: draft.end,
-        breakMinutes: draft.breakMinutes,
-        paidBreak: draft.paidBreak,
-        notes: draft.notes,
-        netMinutes:
-            HoursDraft.clock(draft.end)! -
-            HoursDraft.clock(draft.start)! -
-            (draft.paidBreak ? 0 : draft.breakMinutes),
+class HoursRepository {
+  HoursRepository(this.api);
+  final ApiClient api;
+  Future<List<Workspace>> workspaces() async =>
+      ((await api.request('GET', '/workspaces'))['data'] as List)
+          .map((e) => Workspace.fromJson(e as Json))
+          .toList();
+  Future<Workspace> createWorkspace(Json input) async => Workspace.fromJson(
+    (await api.request('POST', '/workspaces', body: input))['data'] as Json,
+  );
+  Future<HoursPage> week(int workspace, DateTime start) async {
+    final end = DateTime(start.year, start.month, start.day + 6);
+    final first = HoursPage.fromJson(
+      await api.request(
+        'GET',
+        '/workspaces/$workspace/hours',
+        query: {
+          'start': dateKey(start),
+          'end': dateKey(end),
+          'per_page': '100',
+        },
       ),
+    );
+    for (var page = 2; page <= first.lastPage; page++) {
+      final next = HoursPage.fromJson(
+        await api.request(
+          'GET',
+          '/workspaces/$workspace/hours',
+          query: {
+            'start': dateKey(start),
+            'end': dateKey(end),
+            'per_page': '100',
+            'page': '$page',
+          },
+        ),
+      );
+      first.entries.addAll(next.entries);
+    }
+    return first;
+  }
+
+  Future<HoursEntry> save(
+    int workspace,
+    HoursDraft draft,
+    MutationKey mutation, {
+    HoursEntry? existing,
+  }) async {
+    final path =
+        '/workspaces/$workspace/hours${existing == null ? '' : '/${existing.id}'}';
+    final body = draft.toJson(version: existing?.version);
+    return HoursEntry.fromJson(
+      (await api.request(
+            existing == null ? 'POST' : 'PATCH',
+            path,
+            body: body,
+            idempotencyKey: mutation.forPayload([path, body]),
+          ))['data']
+          as Json,
     );
   }
 
-  @override
-  void clear() {
-    _entries.clear();
-    locked.clear();
+  Future<List<Project>> projects(int workspace) async {
+    final projects = <Project>[];
+    var page = 1, last = 1;
+    do {
+      final json = await api.request(
+        'GET',
+        '/workspaces/$workspace/projects',
+        query: {'page': '$page'},
+      );
+      projects.addAll(
+        (json['data'] as List).map((e) => Project.fromJson(e as Json)),
+      );
+      last = json['meta']['last_page'] as int;
+      page++;
+    } while (page <= last);
+    return projects;
   }
 }

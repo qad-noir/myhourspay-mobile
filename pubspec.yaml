@@ -1,5 +1,5 @@
 name: myhourspay
-description: "MyHoursPay companion app — incremental demo milestone."
+description: "MyHoursPay companion app — native mobile companion."
 publish_to: 'none'
 version: 0.1.0+1
 
@@ -9,6 +9,11 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  flutter_secure_storage: ^11.2.0
+  http: ^1.6.0
+  timezone: ^0.11.1
+  url_launcher: ^6.3.2
+  uuid: ^4.6.0
 
 dev_dependencies:
   flutter_test:
@@ -17,3 +22,5 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
+  assets:
+    - assets/brand/

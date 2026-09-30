@@ -1,0 +1,2 @@
+# Preserve the canonical backend contract byte-for-byte, including CRLF.
+docs/api/mobile.openapi.yaml -text whitespace=cr-at-eol
