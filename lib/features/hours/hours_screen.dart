@@ -30,6 +30,18 @@ class HoursScreen extends StatelessWidget {
     final workspace = model.workspace!;
     final entries = model.page?.entries ?? <HoursEntry>[];
     return Scaffold(
+      bottomNavigationBar: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(24, 12, 24, 12),
+          child: FilledButton.icon(
+            onPressed: workspace.writable && !model.loadingWeek
+                ? () => edit(context)
+                : null,
+            icon: const Icon(Icons.add),
+            label: const Text('Add hours'),
+          ),
+        ),
+      ),
       appBar: AppBar(
         title: Text(workspace.name),
         actions: [
@@ -128,13 +140,6 @@ class HoursScreen extends StatelessWidget {
               ),
             const SizedBox(height: 24),
           ],
-          FilledButton.icon(
-            onPressed: workspace.writable && !model.loadingWeek
-                ? () => edit(context)
-                : null,
-            icon: const Icon(Icons.add),
-            label: const Text('Add hours'),
-          ),
           if (workspace.timesheetsEnabled)
             Padding(
               padding: const EdgeInsets.only(top: 12),

@@ -191,6 +191,7 @@ class SessionModel extends ChangeNotifier {
     try {
       week = weekStart(workspaceToday(value.timezone));
     } on ArgumentError {
+      workspace = null;
       failure = const ApiFailure(
         'unsupported_timezone',
         'This workspace uses an unsupported timezone.',

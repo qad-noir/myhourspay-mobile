@@ -1,67 +1,87 @@
-# Environments, devices and release setup
+# Native API setup
 
-## Network configuration
-Current executable is demo-only. The future client must explicitly read APP_ENV
-(development/staging/production) and API_ORIGIN through dart-define and validate
-with ApiEnvironment. Do not imply these flags enable networking in this build.
-Missing settings must fail closed, never select production. Build-time values are
-public. Keep secrets, Apple keys and provider client secrets on Laravel.
+## Environment and networking
 
-For local Laravel, Android emulator reaches the computer at 10.0.2.2, typically
-http://10.0.2.2:8000 when that service is configured. Device localhost is the device.
-Physical devices require a reachable LAN listener or HTTPS tunnel; verify firewall
-and bind settings. Permit local HTTP only in Android debug manifest/network
-security config or an iOS debug-only ATS exception. No release exceptions and no
-certificate-validation bypass. Staging and production require HTTPS. Existing
-production origin is https://mhp.glsltd.co.uk; no test writes are permitted there.
+Required public build-time values:
+- APP_ENV: development, staging or production.
+- API_BASE_URL: explicit origin plus /api/v1/mobile, without credentials/query.
 
-Create actual development, staging and production flavours after owner-approved
-package/bundle IDs are supplied. Generated com.example identifiers are placeholders,
-not release identities. Separate Android applicationId suffixes and iOS schemes,
-bundle IDs, entitlements and provider client configs. Do not invent company IDs.
-Staging requires an isolated backend/database, HTTPS origin, mail sandbox and
-separate provider callbacks; none exists today.
+Development rejects the known production host. Staging and production require
+HTTPS. Release builds reject HTTP even in the development environment. The client
+never disables certificate verification and never follows API redirects.
 
-## Android and iOS
-Run flutter doctor -v and flutter devices. Android needs SDK/platform tools, JDK
-and accepted licences; use flutter build apk --debug for compilation evidence.
-Emulator/physical-device tests are separate from compilation. Release requires an
-owner-controlled signing keystore and provider signing fingerprints.
+Android emulator: http://10.0.2.2:8000/api/v1/mobile.
+Host-side repository verification: http://127.0.0.1:8000/api/v1/mobile.
+Physical devices need a reachable LAN service or an HTTPS tunnel; device localhost
+is not the development computer. Use an HTTPS tunnel on iOS unless an explicitly
+scoped debug-only local networking exception is configured by the iOS developer.
+The committed iOS release plist has no ATS exception. Android HTTP permission is
+in the debug manifest only; release must use HTTPS.
 
-Windows cannot build iOS. Use macOS with supported Xcode, CocoaPods as required,
-an Apple team, registered bundle IDs, provisioning profiles and signing. Enable
-Sign in with Apple and associated domains only for verified owned domains and
-configured callbacks. Test simulator and real-device secure storage, return links,
-logout, text scaling and background/resume before TestFlight. Do not check secrets
-or signing materials into Git.
+Production target after confirmed backend deployment:
+https://mhp.glsltd.co.uk/api/v1/mobile. Deployment has not been assumed or tested.
+Staging still needs an isolated database, HTTPS service and provider registrations.
 
-## Provider setup (blocked; no SDK integration yet)
-Google: supply Android/iOS client IDs plus backend audience allowlist, Android
-package and debug/release SHA signing fingerprints, iOS bundle ID and URL scheme
-from provider configuration. Use maintained native/system-browser integration.
-Pass identity credentials to Laravel over HTTPS; never use them as MHP tokens.
+## Native credentials and signing
 
-Apple: supply team ID, key ID and backend private key, iOS app ID/bundle capability,
-Android browser service ID, associated app/service grouping and exact HTTPS return
-URL. Backend must verify issuer/audience/signature/expiry and nonce/state/code
-binding. Android requires a secure browser callback and verified return-to-app
-link. Return only an expiring single-use exchange code, never an MHP token in a URL.
-No callback URL or provider ID has been invented or configured.
+Android debug uses .dev applicationIdSuffix to isolate it from a later release.
+The base com.example.myhourspay identity is still a scaffold placeholder; the owner
+must supply final package/bundle identities and release signing. The generated
+release build still has scaffold debug signing and MUST NOT be uploaded as a release.
+Do not guess a reverse-domain identity from the website host. Full staging flavour
+and matching iOS schemes/provider configs are still a release configuration task.
 
-Provider cancellation is a normal return to sign-in. Matching email is not account
-linking authority. Preserve MFA and all MHP account restrictions for social login.
-Private relay email and first-authorisation-only Apple profile data need tests.
-Deletion must address provider grant revocation and account retention policy.
+Android needs working cmdline-tools, accepted SDK licences and the Flutter-selected
+NDK. Secure-storage data is excluded from Android auto-backup. No biometric permission
+is requested. Tokens live in platform-backed storage, not preferences.
 
-## Store and notification work
-Free companion only. No purchase buttons, Stripe links or upgrade_url rendering.
-Before submission, review current Apple/Google policies for the actual regions and
-flows; this file is not a completed store-policy review. Confirm Apple equivalent
-login requirements when adding Google. Implement in-app deletion with recent
-authentication before release, privacy policy/data disclosures, accurate permissions,
-review account and reviewer instructions. Avoid unneeded device permissions.
+iOS requires macOS, Xcode, Apple team/signing and device provisioning. Runner has
+keychain entitlements; validate secure write/read/delete on a real signed device.
+The token uses unlocked-this-device keychain access. Do not claim Windows builds
+iOS. Neither iOS nor native keychain/keystore behaviour has been device-tested here.
 
-Push is deferred. It requires FCM/APNs configuration, backend device-token
-registration/rotation, account/device ownership and logout cleanup. Keep sensitive
-hours/account data out of lock-screen previews. Push transport is separate from
-foreground REST and WebSockets.
+## Google / Apple
+
+GET /auth/providers is called without an MHP token. A false/unavailable provider
+never becomes a sign-in action. No provider button is currently enabled because
+SDK/device registration has not been completed, even if the backend later reports
+true. This is deliberate configuration gating, not simulated social login.
+
+Needed for Google: registered Android package, debug/release signing fingerprints,
+iOS bundle/client configuration, correct web/server client ID and Laravel
+MOBILE_GOOGLE_AUDIENCES. Needed for Apple: app/bundle and Services IDs, grouping,
+team/key configuration on Laravel, MOBILE_APPLE_AUDIENCES, sender relay setup and
+nonce-based native authorization. IDs/secrets are not inferred from the website.
+
+Apple on Android also needs its registered HTTPS callback and verified secure
+return-to-app handoff. The backend exchange endpoint is not that callback.
+Never put MHP bearer tokens into URLs. See the integration guide for freshness,
+nonce, replay, MFA, private relay and account-linking rules.
+
+## Account flows and remaining release work
+
+Verification stores the restricted access_token and replaces it only after a
+successful /auth/email/verify response. MFA challenge_token is memory-only and
+never a bearer credential. Expiry requires sign-in; there is no token refresh.
+
+Offline logout clears local credentials/data but cannot confirm server revocation;
+the UI explains this and suggests revoking from another session. Private records
+are memory-only, and environment/account/workspace changes isolate them. Readonly
+workspaces hide writes, but Laravel remains the permission authority.
+
+Forgot-password starts the actual generic backend email flow. The reset link opens
+the existing website; native reset deep links are not configured. Registration
+requires terms acceptance and separate opt-in marketing consent. Terms/privacy open in the system browser using verified /terms and /policy routes. The legal copy
+must be reviewed for launch. Trial-choice restrictions show an account-action
+screen; no purchase or upgrade links are rendered.
+
+Profile editing, account deletion/provider revocation, provider unlinking, push
+registration/delivery and native trial-choice resolution are not supported by this
+API contract. Complete them and current store privacy/deletion/login requirements
+before release. They do not prevent the first hours workflow from being verified.
+
+References used for dependency setup:
+- https://pub.dev/packages/http
+- https://pub.dev/packages/flutter_secure_storage
+- https://pub.dev/packages/uuid
+- https://pub.dev/packages/timezone

@@ -25,6 +25,8 @@ ThemeData mhpTheme() => ThemeData(
   ),
   filledButtonTheme: FilledButtonThemeData(
     style: FilledButton.styleFrom(
+      backgroundColor: brandOrange,
+      foregroundColor: brandInk,
       minimumSize: const Size(64, 52),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
     ),

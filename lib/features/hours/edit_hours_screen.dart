@@ -24,7 +24,12 @@ class _EditHoursScreenState extends State<EditHoursScreen> {
     text: '${existing?.breakMinutes ?? workspace.defaultBreak}',
   );
   late final notes = TextEditingController(text: existing?.notes ?? '');
-  late DateTime date = existing?.date ?? widget.model.week;
+  late DateTime date = existing?.date ?? initialDate();
+  DateTime initialDate() {
+    final today = workspaceToday(workspace.timezone);
+    return weekStart(today) == widget.model.week ? today : widget.model.week;
+  }
+
   late bool paid = existing?.paidBreak ?? workspace.paidBreak,
       billable = existing?.billable ?? false;
   late int? projectId = existing?.projectId;

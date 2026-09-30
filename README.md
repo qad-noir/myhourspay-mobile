@@ -1,63 +1,82 @@
-# MyHoursPay Flutter companion
+# MHP native Flutter companion
 
-An incremental **demo milestone**, not a production-connected app. Explore demo →
-choose workspace → view Monday–Sunday → add hours. Entries exist only in memory
-and are cleared on logout/restart. They do not appear in the Laravel website.
-Native password/social sign-in and the remaining lifecycle screens are not implemented.
+The app now uses Laravel's implemented **mobile API 1.0.0**, not demo data.
+The contract is pinned from backend commit
+`a973d70871330475ee4899ddf8df867215e7e364` (after e9653df).
 
-## Run and verify
+## Run against local Laravel
 
-Installed SDK verified: Flutter 3.47.2 / Dart 3.13.2 on Windows.
+Start the configured local Laravel application and apply its three mobile
+migrations. Then, for an Android emulator:
 
-```
+```sh
 flutter pub get
-flutter run
+flutter run --dart-define=APP_ENV=development --dart-define=API_BASE_URL=http://10.0.2.2:8000/api/v1/mobile
+```
+
+Missing configuration opens a setup screen and makes no request. There is no
+production fallback. `API_BASE_URL` includes `/api/v1/mobile`.
+The production target is configured only explicitly after deployment verification;
+this work does not establish that it has been deployed. Staging is not configured.
+
+## Implemented
+
+- Password sign-in, registration with separate optional marketing consent,
+  MFA/TOTP or recovery-code challenge, email verification/resend and forgot-password.
+- Secure device-token persistence and restore, expiry/401 reauthentication,
+  restricted account states, logout, device listing and remote revocation.
+- Workspace selection and creation; current week uses the workspace timezone.
+- Server weekly totals, week navigation, add/update hours and conditional projects.
+- UUID idempotency keys retained for identical manual retries; version-conflict
+  handling preserves drafts and requires an explicit reload before another edit.
+- Capability/role-gated timesheet submission, detail, approval, request changes and
+  reopening. MFA status is read-only. No push delivery is promised.
+
+The app fetches `/auth/providers` before considering provider availability. Native
+provider integration is not configured, so no Google/Apple action is exposed.
+No provider credentials, callback URL or client IDs have been invented.
+
+## Why these pieces
+
+ChangeNotifier keeps state explicit and testable without another state framework.
+Navigator handles native pages, and an authentication/workspace gate discards
+private routes when the session expires, is restricted, or changes accounts.
+
+`http` provides a small injectable transport. Redirects are disabled, bearer
+credentials stay within the configured origin/API path, requests time out, and
+Retry-After blocks premature retries. There are no automatic write retries or
+refresh endpoints. Errors use `code`, `message`, and field `errors` from Laravel.
+
+`flutter_secure_storage` holds only the opaque token and expiry in one secure
+record scoped to the API environment. Passwords, MFA codes and account records
+are not persisted. `url_launcher` opens the verified website legal routes in the system browser. `uuid` creates mutation identifiers. `timezone` selects the
+workspace's calendar week without converting work dates to UTC.
+
+Repositories and models are handwritten against the pinned contract; there are no
+generated Dart files. `lib/features` contains auth/session, hours, account and
+timesheet code. `lib/core` owns HTTP, configuration and secure storage.
+
+## Verification
+
+```sh
+dart format --output=none --set-exit-if-changed lib test tool
 flutter analyze
 flutter test
-dart format --output=none --set-exit-if-changed lib test
+python tool/check_contract.py
 ```
 
-No API is contacted, including production. No passwords or tokens are collected.
-See docs/BACKEND_HANDOFF.md for the blocking live integration work and acceptance
-procedure, docs/SETUP.md for platform/provider setup, and docs/api/README.md for
-contract provenance. Staging is not provisioned.
+The opt-in `tool/verify_local.dart` uses the same real repositories as the app.
+It creates one clearly labelled test entry on an unused date, replays the write,
+updates it, checks stale-version rejection, reads it back and revokes its token:
 
-## Structure and decisions
+```sh
+dart run tool/verify_local.dart http://127.0.0.1:8000/api/v1/mobile test-login/test-login.txt
+```
 
-- `lib/features/hours`: screens, typed entry/draft models and repository boundary.
-- `lib/features/session`: ChangeNotifier state model. Flutter's built-in notifier
-  makes this small slice understandable without an additional state dependency.
-  A generation counter prevents old workspace responses replacing current data.
-- Navigator handles the single add-hours route. Adopt a declarative router when
-  deep links and real authentication gates exist, rather than adding one prematurely.
-- `lib/core/api_environment.dart`: tested configuration/origin guard for the future
-  client. It is not a live client and is not yet wired to network requests.
-- No HTTP or storage package is installed because the current app has neither
-  credentials nor networking. Select maintained HTTP and platform secure-storage
-  packages and verify SDK compatibility when implementing the agreed auth contract.
-  Never substitute shared preferences for bearer-token storage.
+Use only a designated local test account. That script refuses non-local hosts.
+Credentials and results are ignored by Git. It leaves the test record for website
+verification; it never overwrites an existing date. Do not run it repeatedly
+without reviewing the retained test entries.
 
-The SessionPhase enum reserves backend states, but only demo entry and logout are
-implemented. It is not proof of MFA support. Demo totals model inspected clock
-arithmetic solely for UI work; Laravel must supply authoritative production totals.
-The draft model rejects invalid same-day shifts to give immediate form feedback;
-backend validation still owns acceptance.
-
-Visual direction follows source CSS: ink #171421, orange #ff6b35, muted #6e6878,
-light surface #faf9fb, and darker orange #b3421c for readable controls. The weekly
-ledger is the main visual structure. Platform fonts are used; licensed Manrope/DM
-Sans assets from the website have not been bundled. Layout scrolls and constrains
-wide-screen content; buttons have accessible labels and time inputs use 24-hour text.
-
-## Achieved / pending
-
-Implemented: temporary demo session, workspace choice/isolation, weekly ledger,
-empty state, add-hours form, validation, success feedback, retry/reload, duplicate
-and lock errors at repository boundary, configuration guard, unit/widget tests.
-
-Pending: real sign-in/MFA and verification gates; registration/recovery; Google and
-Apple; project selection; edit/version conflicts; submission and manager review;
-account settings/linking/deletion; secure revocable sessions; API error handling;
-read cache; platform flavours/signing; generated API docs and breaking-change CI.
-No write idempotency, live authorization, provider or MFA tests are claimed.
-The first live end-to-end milestone remains blocked on backend implementation.
+See [verification evidence](docs/VERIFICATION.md), [device/environment setup](docs/SETUP.md),
+and the pinned [backend integration guide](docs/api/mobile-integration.md).

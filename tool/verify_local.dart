@@ -45,12 +45,12 @@ Future<void> main(List<String> args) async {
       password,
       'MHP Dart repository integration',
     );
+    api.token = result.accessToken;
     if (result.status != 'authenticated') {
       stdout.writeln('Account requires ${result.status}; no hours written.');
       exitCode = 1;
       return;
     }
-    api.token = result.accessToken;
     await auth.me();
     final workspaces = await hours.workspaces();
     final workspace = workspaces.where((w) => w.writable).first;

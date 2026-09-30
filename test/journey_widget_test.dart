@@ -144,7 +144,7 @@ void main() {
       await tester.tap(find.text('Save hours'));
       await tester.pumpAndSettle();
       expect(find.text('Hours saved to MHP.'), findsOneWidget);
-      await tester.scrollUntilVisible(find.text('09:00 – 17:00'), -300);
+      await tester.scrollUntilVisible(find.text('09:00 – 17:00'), 300);
       await tester.tap(find.text('09:00 – 17:00'));
       await tester.pumpAndSettle();
       await tester.drag(find.byType(ListView).last, const Offset(0, -900));
