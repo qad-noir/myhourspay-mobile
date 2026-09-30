@@ -78,6 +78,7 @@ class _MhpAppState extends State<MhpApp> {
     title: 'MyHoursPay',
     debugShowCheckedModeBanner: false,
     theme: mhpTheme(),
+    builder: phoneShell,
     home: ListenableBuilder(
       listenable: widget.model,
       builder: (context, _) {

@@ -24,3 +24,11 @@ flutter:
   uses-material-design: true
   assets:
     - assets/brand/
+    - assets/providers/
+  fonts:
+    - family: Manrope
+      fonts:
+        - asset: assets/fonts/Manrope.ttf
+    - family: DM Sans
+      fonts:
+        - asset: assets/fonts/DMSans.ttf
