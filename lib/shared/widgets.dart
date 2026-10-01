@@ -300,7 +300,15 @@ class LoadingCards extends StatelessWidget {
 }
 
 String friendlyFailure(ApiFailure f) {
-  if (f.status == 401) return 'Your session has expired. Please sign in again.';
+  if (f.code == 'invalid_credentials') {
+    return 'The email or password is incorrect.';
+  }
+  if (f.status == 401) {
+    return 'Sign-in was rejected by the server. Check your credentials and API configuration.';
+  }
+  if (f.status == 404) {
+    return 'The requested API route is unavailable. Check the API URL and backend deployment.';
+  }
   if (f.status == 403) {
     return 'You do not have permission for this action in this workspace.';
   }

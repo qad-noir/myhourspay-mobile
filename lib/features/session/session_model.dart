@@ -75,6 +75,12 @@ class SessionModel extends ChangeNotifier {
         'The API response is not compatible with this app.',
       );
       return false;
+    } on TypeError {
+      failure = const ApiFailure(
+        'invalid_response',
+        'The API response is not compatible with this app. Check the backend deployment.',
+      );
+      return false;
     } catch (_) {
       failure = const ApiFailure(
         'device_error',
@@ -107,7 +113,10 @@ class SessionModel extends ChangeNotifier {
   }
 
   Future<bool> login(String email, String password, String device) =>
-      perform(() async => _accept(await auth.login(email, password, device)));
+      perform(() async {
+        phase = SessionPhase.signedOut;
+        await _accept(await auth.login(email, password, device));
+      });
   Future<bool> register(Json input) =>
       perform(() async => _accept(await auth.register(input)));
   Future<bool> completeMfa(String code, bool recovery) => perform(() async {
@@ -143,8 +152,15 @@ class SessionModel extends ChangeNotifier {
         await auth.logout();
       } catch (_) {}
       auth.api.token = null;
-      await _clear(SessionPhase.signedOut);
-      rethrow;
+      try {
+        await _clear(SessionPhase.signedOut);
+      } catch (_) {
+        // Local bearer state has already been cleared; never use an unpersisted token.
+      }
+      throw const ApiFailure(
+        'storage_error',
+        'Cannot save your session in secure device storage. Restart the app and try again. If it persists, contact support with your device model and Android/iOS version.',
+      );
     }
     auth.api.token = saved.token;
     _challenge = null;
