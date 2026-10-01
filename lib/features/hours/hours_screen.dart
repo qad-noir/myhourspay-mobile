@@ -47,49 +47,54 @@ class _HoursScreenState extends State<HoursScreen> {
     ];
     final accountTab = items.length - 1;
     return Scaffold(
-      bottomNavigationBar: SafeArea(
-        top: false,
-        child: Container(
-          decoration: const BoxDecoration(
-            color: brandSurface,
-            border: Border(top: BorderSide(color: brandBorder)),
-          ),
-          child: Row(
-            children: [
-              for (var i = 0; i < items.length; i++)
-                Expanded(
-                  child: Semantics(
-                    selected: tab == i,
-                    child: InkWell(
-                      onTap: () => setState(() => tab = i),
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 10),
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(
-                              tab == i ? items[i].$3 : items[i].$2,
-                              color: tab == i ? brandAction : brandMuted,
-                              size: 23,
-                            ),
-                            const SizedBox(height: 3),
-                            Text(
-                              items[i].$1,
-                              style: TextStyle(
-                                fontSize: 11,
-                                color: tab == i ? brandAction : brandMuted,
+      resizeToAvoidBottomInset: false,
+      bottomNavigationBar: MediaQuery.viewInsetsOf(context).bottom > 0
+          ? null
+          : SafeArea(
+              top: false,
+              child: Container(
+                decoration: const BoxDecoration(
+                  color: brandSurface,
+                  border: Border(top: BorderSide(color: brandBorder)),
+                ),
+                child: Row(
+                  children: [
+                    for (var i = 0; i < items.length; i++)
+                      Expanded(
+                        child: Semantics(
+                          selected: tab == i,
+                          child: InkWell(
+                            onTap: () => setState(() => tab = i),
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(vertical: 10),
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(
+                                    tab == i ? items[i].$3 : items[i].$2,
+                                    color: tab == i ? brandAction : brandMuted,
+                                    size: 23,
+                                  ),
+                                  const SizedBox(height: 3),
+                                  Text(
+                                    items[i].$1,
+                                    style: TextStyle(
+                                      fontSize: 11,
+                                      color: tab == i
+                                          ? brandAction
+                                          : brandMuted,
+                                    ),
+                                  ),
+                                ],
                               ),
                             ),
-                          ],
+                          ),
                         ),
                       ),
-                    ),
-                  ),
+                  ],
                 ),
-            ],
-          ),
-        ),
-      ),
+              ),
+            ),
       body: tab == accountTab
           ? AccountScreen(model: model)
           : w.timesheetsEnabled && tab == 2

@@ -15,8 +15,9 @@ void main() {
       final api = ApiClient(
         ApiEnvironment.parse('development', 'http://localhost/api/v1/mobile'),
         transport: MockClient((r) async {
-          if (r.url.path.endsWith('/auth/login'))
+          if (r.url.path.endsWith('/auth/login')) {
             return response(tokenResponse());
+          }
           expect(r.headers['authorization'], 'Bearer test-token');
           if (r.url.path.endsWith('/me')) return response({'data': user});
           return response({'message': 'Unauthenticated.'}, status);

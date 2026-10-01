@@ -102,8 +102,25 @@ class _TimesheetScreenState extends State<TimesheetScreen> {
         workspace.writable &&
         ['draft', 'rejected', 'reopened'].contains(status) &&
         widget.model.page?.entries.isNotEmpty == true;
+    final keyboardOpen = MediaQuery.viewInsetsOf(context).bottom > 0;
+    final submitAction = FilledButton(
+      onPressed: saving ? null : submit,
+      child: Text(saving ? 'Submitting…' : 'Submit for approval'),
+    );
+    final showSubmit = !loading && !review && canSubmit;
     return Scaffold(
+      bottomNavigationBar: !keyboardOpen && showSubmit
+          ? SafeArea(
+              top: false,
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(22, 10, 22, 12),
+                child: submitAction,
+              ),
+            )
+          : null,
       body: PageBody(
+        padding: const EdgeInsets.fromLTRB(22, 22, 22, 12),
+        footer: keyboardOpen && showSubmit ? submitAction : null,
         children: [
           const SizedBox(height: 12),
           Row(
@@ -240,11 +257,6 @@ class _TimesheetScreenState extends State<TimesheetScreen> {
               const InfoPanel(
                 'Your manager can review this week after you submit.',
                 success: true,
-              ),
-              const SizedBox(height: 14),
-              FilledButton(
-                onPressed: saving ? null : submit,
-                child: Text(saving ? 'Submitting…' : 'Submit for approval'),
               ),
             ] else if (['submitted', 'approved', 'locked'].contains(status))
               InfoPanel(

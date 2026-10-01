@@ -304,6 +304,9 @@ class _LoginScreenState extends State<LoginScreen> {
                   Padding(
                     padding: const EdgeInsets.only(bottom: 12),
                     child: OutlinedButton.icon(
+                      style: OutlinedButton.styleFrom(
+                        backgroundColor: Colors.white,
+                      ),
                       onPressed: model.busy
                           ? null
                           : widget.providerActions[provider],
@@ -313,7 +316,11 @@ class _LoginScreenState extends State<LoginScreen> {
                               width: 22,
                               height: 22,
                             )
-                          : const Icon(Icons.apple, color: brandInk, size: 26),
+                          : Image.asset(
+                              'assets/providers/apple.png',
+                              width: 39,
+                              height: 44,
+                            ),
                       label: Text(
                         'Continue with ${provider == 'google' ? 'Google' : 'Apple'}',
                         style: const TextStyle(color: brandInk),

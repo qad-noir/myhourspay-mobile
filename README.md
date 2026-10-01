@@ -80,3 +80,15 @@ without reviewing the retained test entries.
 
 See [verification evidence](docs/VERIFICATION.md), [device/environment setup](docs/SETUP.md),
 and the pinned [backend integration guide](docs/api/mobile-integration.md).
+
+## Visual rebuild
+
+Eight production screens now follow the mobile concept boards using bundled fonts,
+shared native components and a phone-width web shell. See
+[rendered screenshots and verification](docs/visual-review/README.md).
+
+Chrome local preview (Laravel must already be running):
+
+```powershell
+flutter run --debug -d chrome --dart-define=APP_ENV=development --dart-define=API_BASE_URL=http://127.0.0.1:8000/api/v1/mobile
+```

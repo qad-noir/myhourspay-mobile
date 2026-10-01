@@ -228,9 +228,29 @@ class _EditHoursScreenState extends State<EditHoursScreen> {
             0,
             1440,
           );
+    final keyboardOpen = MediaQuery.viewInsetsOf(context).bottom > 0;
+    final saveAction = FilledButton(
+      onPressed: saving || conflict || !workspace.writable ? null : save,
+      child: Text(
+        saving
+            ? 'Saving…'
+            : existing == null
+            ? 'Save hours'
+            : 'Update hours',
+      ),
+    );
     return PopScope(
       canPop: !saving,
       child: Scaffold(
+        bottomNavigationBar: keyboardOpen
+            ? null
+            : SafeArea(
+                top: false,
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(22, 12, 22, 16),
+                  child: saveAction,
+                ),
+              ),
         appBar: AppBar(
           leading: BackButton(
             onPressed: saving ? null : () => Navigator.maybePop(context),
@@ -262,18 +282,7 @@ class _EditHoursScreenState extends State<EditHoursScreen> {
           key: form,
           child: PageBody(
             padding: const EdgeInsets.fromLTRB(22, 8, 22, 16),
-            footer: FilledButton(
-              onPressed: saving || conflict || !workspace.writable
-                  ? null
-                  : save,
-              child: Text(
-                saving
-                    ? 'Saving…'
-                    : existing == null
-                    ? 'Save hours'
-                    : 'Update hours',
-              ),
-            ),
+            footer: keyboardOpen ? saveAction : null,
             children: [
               TextButton.icon(
                 style: TextButton.styleFrom(
