@@ -17,3 +17,7 @@ Launcher artwork is generated from assets/brand/brand-mark.png for Android, iOS,
 The designated production account now passes a read-only verification through the app's actual Dart repositories: password login, bearer /me, workspace listing (one workspace), and weekly-hours read. Google and Apple capabilities both returned false. The verification device session was revoked; no hours were written. This supersedes the earlier endpoint-404 observation.
 
 The reported Android error is still under investigation. Added a distinct fail-closed TLS handshake error and safe unexpected-error diagnostics (exception type plus application stack frames only; no exception messages, credentials, tokens, or response bodies). Seven focused login/session tests passed; static analysis passed. A production release APK built successfully and was installed over the existing app on the connected Samsung SM_N981N, preserving app data. Device reproduction is pending.
+
+## Confirmed Android root cause
+
+The diagnostic APK showed the TLS-specific error. Phone time is correct. The live certificate chain fails against the actual phone system trust store with OpenSSL error 20 (unable to get local issuer certificate). SSL.com's official cross-signed RSA R1 intermediate validates the existing domain certificate successfully against that same trust store. See deployment/android-tls-repair.md and its prepared public CA bundle. Hosting deployment is outstanding; native login is not yet claimed successful.
