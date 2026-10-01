@@ -140,6 +140,11 @@ class ApiClient {
         onSessionFailure?.call(failure);
       }
       throw failure;
+    } on HandshakeException {
+      throw const ApiFailure(
+        'tls_error',
+        'Cannot establish a trusted secure connection to MHP. Check your device date and time. If it persists, the server certificate configuration needs checking.',
+      );
     } on TimeoutException {
       throw const ApiFailure(
         'timeout',

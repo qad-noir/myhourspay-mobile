@@ -11,3 +11,9 @@ The connected Android 13 Samsung SM_N981N became available over ADB. Filtered re
 Validation: 11 targeted login/session tests passed, including malformed login JSON, rejected login after expiry, secure-storage failure with token revocation, and authenticated workspace failures.
 
 Launcher artwork is generated from assets/brand/brand-mark.png for Android, iOS, and web. Regenerate on Windows with tool/generate_icons.ps1. Rebuild and install the APK to update an existing phone installation; changing source icons cannot alter an already-built APK.
+
+## Follow-up after endpoint deployment
+
+The designated production account now passes a read-only verification through the app's actual Dart repositories: password login, bearer /me, workspace listing (one workspace), and weekly-hours read. Google and Apple capabilities both returned false. The verification device session was revoked; no hours were written. This supersedes the earlier endpoint-404 observation.
+
+The reported Android error is still under investigation. Added a distinct fail-closed TLS handshake error and safe unexpected-error diagnostics (exception type plus application stack frames only; no exception messages, credentials, tokens, or response bodies). Seven focused login/session tests passed; static analysis passed. A production release APK built successfully and was installed over the existing app on the connected Samsung SM_N981N, preserving app data. Device reproduction is pending.

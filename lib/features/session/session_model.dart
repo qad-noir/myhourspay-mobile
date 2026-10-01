@@ -81,7 +81,13 @@ class SessionModel extends ChangeNotifier {
         'The API response is not compatible with this app. Check the backend deployment.',
       );
       return false;
-    } catch (_) {
+    } catch (error, stack) {
+      // Exception messages can contain credentials or response bodies. Log only
+      // the type and our own stack frames to diagnose unexpected device failures.
+      debugPrint('MHP action failure: ${error.runtimeType}');
+      for (final frame in stack.toString().split('\n')) {
+        if (frame.contains('package:myhourspay/')) debugPrint(frame);
+      }
       failure = const ApiFailure(
         'device_error',
         'Could not complete this action securely. Please try again.',

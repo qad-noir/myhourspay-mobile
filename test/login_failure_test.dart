@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/testing.dart';
 import 'package:myhourspay/core/api_client.dart';
@@ -16,6 +18,27 @@ class FailingStore extends MemorySessionStore {
 }
 
 void main() {
+  test('TLS failures remain fail-closed with an actionable error', () async {
+    final api = ApiClient(
+      ApiEnvironment.parse(
+        'production',
+        'https://mhp.glsltd.co.uk/api/v1/mobile',
+      ),
+      transport: MockClient(
+        (_) async => throw const HandshakeException('test'),
+      ),
+    );
+    final model = SessionModel(
+      AuthRepository(api),
+      HoursRepository(api),
+      MemorySessionStore(),
+    );
+    expect(await model.login('test@example.test', 'test', 'test'), false);
+    expect(model.failure?.code, 'tls_error');
+    expect(model.phase, SessionPhase.signedOut);
+    expect(api.token, isNull);
+    model.dispose();
+  });
   test('public login rejection is not a session expiry', () async {
     final api = ApiClient(
       ApiEnvironment.parse('development', 'http://localhost/api/v1/mobile'),
