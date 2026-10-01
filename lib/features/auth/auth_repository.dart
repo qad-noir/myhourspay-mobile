@@ -43,11 +43,12 @@ class DeviceSession {
     : id = json['id'] as int,
       name = json['device_name'] as String,
       current = json['current'] as bool,
-      expiresAt = json['expires_at'] as String?;
+      expiresAt = json['expires_at'] as String?,
+      lastUsedAt = json['last_used_at'] as String?;
   final int id;
   final String name;
   final bool current;
-  final String? expiresAt;
+  final String? expiresAt, lastUsedAt;
 }
 
 class AuthRepository {
