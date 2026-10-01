@@ -131,13 +131,17 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.text('Choose your workspace'), findsOneWidget);
       await tester.tap(find.text('Test workspace'));
+      await tester.tap(find.text('Continue'));
       await tester.pumpAndSettle();
       await capture('native-week');
       expect(find.text('0h 0m'), findsOneWidget);
       await tester.scrollUntilVisible(find.text('Add hours'), 300);
       await tester.tap(find.text('Add hours'));
       await tester.pumpAndSettle();
-      await tester.drag(find.byType(ListView).last, const Offset(0, -900));
+      await tester.drag(
+        find.byType(SingleChildScrollView).last,
+        const Offset(0, -900),
+      );
       await tester.pumpAndSettle();
       await tester.ensureVisible(find.text('Save hours'));
       await tester.pumpAndSettle();
@@ -147,7 +151,14 @@ void main() {
       await tester.scrollUntilVisible(find.text('09:00 – 17:00'), 300);
       await tester.tap(find.text('09:00 – 17:00'));
       await tester.pumpAndSettle();
-      await tester.drag(find.byType(ListView).last, const Offset(0, -900));
+      await tester.drag(
+        find.byType(SingleChildScrollView).last,
+        const Offset(0, -900),
+      );
+      await tester.pumpAndSettle();
+      await tester.ensureVisible(
+        find.widgetWithText(FilledButton, 'Update hours'),
+      );
       await tester.pumpAndSettle();
       await tester.tap(find.widgetWithText(FilledButton, 'Update hours'));
       await tester.pumpAndSettle();

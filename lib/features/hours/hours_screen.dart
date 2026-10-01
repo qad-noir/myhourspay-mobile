@@ -1,16 +1,26 @@
 import 'package:flutter/material.dart';
 
 import '../../shared/widgets.dart';
+import '../../shared/hours_widgets.dart';
 import '../account/account_screen.dart';
 import '../session/session_model.dart';
 import '../timesheets/timesheet_screen.dart';
 import 'models.dart';
 import 'edit_hours_screen.dart';
 
-class HoursScreen extends StatelessWidget {
-  const HoursScreen({super.key, required this.model});
+class HoursScreen extends StatefulWidget {
+  const HoursScreen({super.key, required this.model, this.initialTab = 0});
   final SessionModel model;
-  Future<void> edit(BuildContext context, {HoursEntry? entry}) async {
+  final int initialTab;
+  @override
+  State<HoursScreen> createState() => _HoursScreenState();
+}
+
+class _HoursScreenState extends State<HoursScreen> {
+  late int tab = widget.initialTab;
+  SessionModel get model => widget.model;
+  Future<void> edit({HoursEntry? entry}) async {
+    ScaffoldMessenger.of(context).hideCurrentSnackBar();
     final saved = await Navigator.of(context).push<bool>(
       MaterialPageRoute(
         builder: (_) => EditHoursScreen(model: model, entry: entry),
@@ -18,7 +28,7 @@ class HoursScreen extends StatelessWidget {
     );
     if (saved == true) {
       await model.reload();
-      if (context.mounted) {
+      if (mounted) {
         ScaffoldMessenger.of(context)
             .showSnackBar(const SnackBar(content: Text('Hours saved to MHP.')));
       }
@@ -27,258 +37,426 @@ class HoursScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final workspace = model.workspace!;
-    final entries = model.page?.entries ?? <HoursEntry>[];
+    final w = model.workspace!;
+    final items = [
+      ('Overview', Icons.home_outlined, Icons.home),
+      ('Hours', Icons.schedule_outlined, Icons.schedule),
+      if (w.timesheetsEnabled)
+        ('Timesheets', Icons.description_outlined, Icons.description),
+      ('Account', Icons.person_outline, Icons.person),
+    ];
+    final accountTab = items.length - 1;
     return Scaffold(
       bottomNavigationBar: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(24, 12, 24, 12),
-          child: FilledButton.icon(
-            onPressed: workspace.writable && !model.loadingWeek
-                ? () => edit(context)
-                : null,
-            icon: const Icon(Icons.add),
-            label: const Text('Add hours'),
+        top: false,
+        child: Container(
+          decoration: const BoxDecoration(
+            color: brandSurface,
+            border: Border(top: BorderSide(color: brandBorder)),
           ),
-        ),
-      ),
-      appBar: AppBar(
-        title: Text(workspace.name),
-        actions: [
-          IconButton(
-            tooltip: 'Switch workspace',
-            onPressed: model.switchWorkspace,
-            icon: const Icon(Icons.swap_horiz),
-          ),
-          IconButton(
-            tooltip: 'Account and devices',
-            onPressed: () => Navigator.push(
-              context,
-              MaterialPageRoute<void>(
-                builder: (_) => AccountScreen(model: model),
-              ),
-            ),
-            icon: const Icon(Icons.person_outline),
-          ),
-        ],
-      ),
-      body: PageBody(
-        children: [
-          Text('Hello, ${model.account?.name ?? ''}'),
-          const SizedBox(height: 8),
-          Text('Your week', style: Theme.of(context).textTheme.headlineLarge),
-          Row(
+          child: Row(
             children: [
-              IconButton(
-                tooltip: 'Previous week',
-                onPressed: model.loadingWeek ? null : () => model.moveWeek(-7),
-                icon: const Icon(Icons.chevron_left),
-              ),
-              Expanded(
-                child: Text(
-                  '${dateKey(model.week)} – ${dateKey(DateTime(model.week.year, model.week.month, model.week.day + 6))}',
-                  textAlign: TextAlign.center,
-                ),
-              ),
-              IconButton(
-                tooltip: 'Next week',
-                onPressed: model.loadingWeek ? null : () => model.moveWeek(7),
-                icon: const Icon(Icons.chevron_right),
-              ),
-            ],
-          ),
-          Text(
-            workspace.timezone,
-            style: Theme.of(context).textTheme.bodySmall,
-          ),
-          if (!workspace.writable)
-            const Notice(
-              'This workspace is read-only. You can view your hours.',
-            ),
-          ErrorNotice(model.failure),
-          if (model.loadingWeek)
-            const Padding(
-              padding: EdgeInsets.all(32),
-              child: Center(child: CircularProgressIndicator()),
-            )
-          else if (model.page != null) ...[
-            const SizedBox(height: 24),
-            Text(
-              durationLabel(model.page!.totalMinutes),
-              style: Theme.of(context).textTheme.headlineLarge,
-            ),
-            Text('of ${durationLabel(workspace.targetMinutes)} target'),
-            const SizedBox(height: 12),
-            Semantics(
-              label:
-                  '${durationLabel(model.page!.totalMinutes)} recorded of ${durationLabel(workspace.targetMinutes)} target',
-              child: LinearProgressIndicator(
-                value: workspace.targetMinutes <= 0
-                    ? 0
-                    : (model.page!.totalMinutes / workspace.targetMinutes)
-                          .clamp(0, 1),
-                color: brandOrange,
-                minHeight: 8,
-                borderRadius: BorderRadius.circular(8),
-              ),
-            ),
-            const SizedBox(height: 28),
-            Text('Daily hours', style: Theme.of(context).textTheme.titleLarge),
-            const SizedBox(height: 8),
-            if (entries.isEmpty)
-              const Notice('No hours this week. Add your first working day.'),
-            for (var day = 0; day < 7; day++)
-              _day(
-                context,
-                DateTime(
-                  model.week.year,
-                  model.week.month,
-                  model.week.day + day,
-                ),
-                entries,
-                workspace.writable,
-              ),
-            const SizedBox(height: 24),
-          ],
-          if (workspace.timesheetsEnabled)
-            Padding(
-              padding: const EdgeInsets.only(top: 12),
-              child: OutlinedButton.icon(
-                onPressed: () => Navigator.push(
-                  context,
-                  MaterialPageRoute<void>(
-                    builder: (_) => TimesheetScreen(model: model),
+              for (var i = 0; i < items.length; i++)
+                Expanded(
+                  child: Semantics(
+                    selected: tab == i,
+                    child: InkWell(
+                      onTap: () => setState(() => tab = i),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 10),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              tab == i ? items[i].$3 : items[i].$2,
+                              color: tab == i ? brandAction : brandMuted,
+                              size: 23,
+                            ),
+                            const SizedBox(height: 3),
+                            Text(
+                              items[i].$1,
+                              style: TextStyle(
+                                fontSize: 11,
+                                color: tab == i ? brandAction : brandMuted,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
                   ),
                 ),
-                icon: const Icon(Icons.assignment_outlined),
-                label: const Text('Timesheets'),
+            ],
+          ),
+        ),
+      ),
+      body: tab == accountTab
+          ? AccountScreen(model: model)
+          : w.timesheetsEnabled && tab == 2
+          ? TimesheetScreen(model: model)
+          : Scaffold(
+              bottomNavigationBar: SafeArea(
+                top: false,
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(22, 10, 22, 14),
+                  child: FilledButton.icon(
+                    onPressed: w.writable && !model.loadingWeek
+                        ? () => edit()
+                        : null,
+                    icon: const Icon(Icons.add, color: Colors.white),
+                    label: const Text('Add hours'),
+                  ),
+                ),
+              ),
+              body: PageBody(
+                children: [
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Align(
+                          alignment: Alignment.centerLeft,
+                          child: OutlinedButton(
+                            onPressed: model.switchWorkspace,
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Icon(
+                                  Icons.business_outlined,
+                                  size: 19,
+                                  color: brandInk,
+                                ),
+                                const SizedBox(width: 10),
+                                Flexible(
+                                  child: Text(
+                                    w.name,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: const TextStyle(
+                                      color: brandInk,
+                                      fontSize: 13,
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 14),
+                                const Icon(
+                                  Icons.expand_more,
+                                  size: 19,
+                                  color: brandInk,
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 24),
+                      IconButton(
+                        tooltip: 'Account and devices',
+                        onPressed: () => setState(() => tab = accountTab),
+                        icon: InitialAvatar(
+                          model.account?.name ?? '',
+                          size: 38,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 22),
+                  Text(
+                    'Hello, ${model.account?.name.split(' ').first ?? ''}',
+                    style: const TextStyle(color: brandMuted),
+                  ),
+                  const SizedBox(height: 3),
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              tab == 1 ? 'Your hours' : 'Your week',
+                              style: titleStyle,
+                            ),
+                            const SizedBox(height: 3),
+                            Text(
+                              weekLabel(model.week),
+                              style: const TextStyle(
+                                color: brandMuted,
+                                fontSize: 15,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      if (model.page != null)
+                        Flexible(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.end,
+                            children: [
+                              Text(
+                                durationLabel(model.page!.totalMinutes),
+                                style: titleStyle.copyWith(fontSize: 24),
+                              ),
+                              if (w.targetMinutes > 0)
+                                Text(
+                                  'of ${durationLabel(w.targetMinutes)} target',
+                                  style: const TextStyle(
+                                    color: brandMuted,
+                                    fontSize: 12,
+                                  ),
+                                ),
+                            ],
+                          ),
+                        ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  if (model.page != null && w.targetMinutes > 0)
+                    LinearProgressIndicator(
+                      value: (model.page!.totalMinutes / w.targetMinutes).clamp(
+                        0,
+                        1,
+                      ),
+                      minHeight: 8,
+                      borderRadius: BorderRadius.circular(8),
+                      color: brandOrange,
+                      backgroundColor: const Color(0xffeeece9),
+                    ),
+                  if (!w.writable)
+                    const Notice(
+                      'This workspace is read-only. You can view your hours.',
+                    ),
+                  ErrorNotice(model.failure),
+                  if (model.loadingWeek)
+                    const Padding(
+                      padding: EdgeInsets.only(top: 24),
+                      child: LoadingCards(),
+                    )
+                  else if (model.page != null) ...[
+                    if (tab == 0) ...[
+                      const SizedBox(height: 32),
+                      WeekChart(week: model.week, entries: model.page!.entries),
+                      const SizedBox(height: 22),
+                    ],
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            tab == 0 ? 'Recent entries' : 'This week',
+                            style: const TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ),
+                        if (tab == 0)
+                          TextButton(
+                            onPressed: () => setState(() => tab = 1),
+                            child: const Text('See all'),
+                          ),
+                      ],
+                    ),
+                    if (model.page!.entries.isEmpty)
+                      const Padding(
+                        padding: EdgeInsets.symmetric(vertical: 24),
+                        child: InfoPanel(
+                          'No hours this week. Add your first working day.',
+                        ),
+                      ),
+                    for (final e
+                        in (tab == 0
+                            ? model.page!.entries.take(3)
+                            : model.page!.entries)) ...[
+                      EntryRow(
+                        entry: e,
+                        onTap: w.writable ? () => edit(entry: e) : null,
+                      ),
+                      const Divider(),
+                    ],
+                  ],
+                  if (tab == 1 || model.failure != null)
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        IconButton(
+                          tooltip: 'Previous week',
+                          onPressed: model.loadingWeek
+                              ? null
+                              : () => model.moveWeek(-7),
+                          icon: const Icon(Icons.chevron_left),
+                        ),
+                        TextButton.icon(
+                          onPressed: model.loadingWeek ? null : model.reload,
+                          icon: const Icon(Icons.refresh, size: 18),
+                          label: const Text('Refresh'),
+                        ),
+                        IconButton(
+                          tooltip: 'Next week',
+                          onPressed: model.loadingWeek
+                              ? null
+                              : () => model.moveWeek(7),
+                          icon: const Icon(Icons.chevron_right),
+                        ),
+                      ],
+                    ),
+                ],
               ),
             ),
-          TextButton.icon(
-            onPressed: model.loadingWeek ? null : model.reload,
-            icon: const Icon(Icons.refresh),
-            label: const Text('Reload week'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _day(
-    BuildContext context,
-    DateTime date,
-    List<HoursEntry> entries,
-    bool writable,
-  ) {
-    final entry = entries
-        .where((e) => dateKey(e.date) == dateKey(date))
-        .firstOrNull;
-    const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-    return Column(
-      children: [
-        const Divider(),
-        ListTile(
-          contentPadding: EdgeInsets.zero,
-          leading: Container(
-            width: 52,
-            padding: const EdgeInsets.symmetric(vertical: 10),
-            decoration: BoxDecoration(
-              color: Colors.black.withValues(alpha: .035),
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: Text(
-              '${days[date.weekday - 1]}\n${date.day}',
-              textAlign: TextAlign.center,
-            ),
-          ),
-          title: Text(
-            entry == null ? 'No entry' : '${entry.start} – ${entry.end}',
-          ),
-          subtitle: entry == null
-              ? null
-              : Text(
-                  entry.notes.isEmpty
-                      ? '${entry.breakMinutes}m ${entry.paidBreak ? 'paid' : 'unpaid'} break'
-                      : entry.notes,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                ),
-          trailing: entry == null
-              ? null
-              : Text(
-                  durationLabel(entry.netMinutes),
-                  style: const TextStyle(fontWeight: FontWeight.w700),
-                ),
-          onTap: entry != null && writable
-              ? () => edit(context, entry: entry)
-              : null,
-        ),
-      ],
     );
   }
 }
 
-class WorkspaceScreen extends StatelessWidget {
+class WorkspaceScreen extends StatefulWidget {
   const WorkspaceScreen({super.key, required this.model});
   final SessionModel model;
   @override
-  Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(
-      actions: [
-        IconButton(
-          tooltip: 'Sign out',
-          onPressed: model.busy ? null : model.logout,
-          icon: const Icon(Icons.logout),
-        ),
-      ],
-    ),
-    body: PageBody(
-      children: [
-        Text(
-          'Choose your workspace',
-          style: Theme.of(context).textTheme.headlineLarge,
-        ),
-        const SizedBox(height: 12),
-        const Text('Where are you working today?'),
-        const SizedBox(height: 24),
-        for (final workspace in model.workspaces)
-          Padding(
-            padding: const EdgeInsets.only(bottom: 12),
-            child: Card(
-              child: ListTile(
-                contentPadding: const EdgeInsets.all(16),
-                leading: const Icon(Icons.business_outlined),
-                title: Text(workspace.name),
-                subtitle: Text(
-                  '${workspace.role} · ${workspace.currency ?? ''}${workspace.writable ? '' : ' · Read-only'}',
-                ),
-                trailing: const Icon(Icons.chevron_right),
-                onTap: model.busy
-                    ? null
-                    : () => model.selectWorkspace(workspace),
+  State<WorkspaceScreen> createState() => _WorkspaceScreenState();
+}
+
+class _WorkspaceScreenState extends State<WorkspaceScreen> {
+  int? selected;
+  @override
+  Widget build(BuildContext context) {
+    final m = widget.model;
+    final selection = m.workspaces
+        .where((w) => w.id == (selected ?? m.workspaces.firstOrNull?.id))
+        .firstOrNull;
+    return Scaffold(
+      appBar: AppBar(
+        actions: [
+          IconButton(
+            tooltip: 'Sign out',
+            onPressed: m.busy ? null : m.logout,
+            icon: const Icon(Icons.logout, size: 21),
+          ),
+        ],
+      ),
+      body: PageBody(
+        footer: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            TextButton.icon(
+              onPressed: m.busy
+                  ? null
+                  : () => Navigator.push(
+                      context,
+                      MaterialPageRoute<void>(
+                        builder: (_) => CreateWorkspaceScreen(model: m),
+                      ),
+                    ),
+              icon: const Icon(Icons.add_circle_outline, color: brandMuted),
+              label: const Text(
+                'Create workspace',
+                style: TextStyle(color: brandInk),
               ),
             ),
+            const SizedBox(height: 20),
+            FilledButton(
+              onPressed: m.busy || selection == null
+                  ? null
+                  : () => m.selectWorkspace(selection),
+              child: const Text('Continue'),
+            ),
+          ],
+        ),
+        children: [
+          const SizedBox(height: 24),
+          const Text('Choose your workspace', style: titleStyle),
+          const SizedBox(height: 8),
+          const Text(
+            'Where are you working today?',
+            style: TextStyle(color: brandMuted, fontSize: 16),
           ),
-        ErrorNotice(model.failure),
-        OutlinedButton.icon(
-          onPressed: model.busy
-              ? null
-              : () => Navigator.push(
-                  context,
-                  MaterialPageRoute<void>(
-                    builder: (_) => CreateWorkspaceScreen(model: model),
+          const SizedBox(height: 30),
+          if (m.busy)
+            const LoadingCards()
+          else
+            for (final w in m.workspaces)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 16),
+                child: Semantics(
+                  selected: selection?.id == w.id,
+                  button: true,
+                  child: InkWell(
+                    onTap: () => setState(() => selected = w.id),
+                    borderRadius: BorderRadius.circular(11),
+                    child: Panel(
+                      color: selection?.id == w.id
+                          ? const Color(0xfffff0e7)
+                          : const Color(0x99ffffff),
+                      borderColor: selection?.id == w.id
+                          ? brandOrange
+                          : brandBorder,
+                      child: Row(
+                        children: [
+                          Container(
+                            width: 46,
+                            height: 46,
+                            decoration: BoxDecoration(
+                              color: selection?.id == w.id
+                                  ? brandOrange
+                                  : const Color(0xffe6e6e7),
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: Icon(
+                              Icons.business_outlined,
+                              color: selection?.id == w.id
+                                  ? Colors.white
+                                  : brandMuted,
+                            ),
+                          ),
+                          const SizedBox(width: 16),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  w.name,
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.w700,
+                                    fontSize: 16,
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  '${capitalized(w.role)}${w.currency == null ? '' : ' · ${w.currency}'}${w.writable ? '' : ' · Read-only'}',
+                                  style: const TextStyle(
+                                    fontSize: 14,
+                                    color: brandMuted,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Icon(
+                            selection?.id == w.id
+                                ? Icons.check_circle
+                                : Icons.radio_button_unchecked,
+                            color: selection?.id == w.id
+                                ? brandOrange
+                                : brandMuted,
+                            size: 23,
+                          ),
+                        ],
+                      ),
+                    ),
                   ),
                 ),
-          icon: const Icon(Icons.add),
-          label: const Text('Create workspace'),
-        ),
-        TextButton(
-          onPressed: model.busy ? null : model.refreshAccount,
-          child: const Text('Reload workspaces'),
-        ),
-      ],
-    ),
-  );
+              ),
+          if (!m.busy && m.workspaces.isEmpty && m.failure == null)
+            const InfoPanel(
+              'Your workspace starts here. Create one to begin recording your hours.',
+            ),
+          ErrorNotice(m.failure),
+          if (m.failure != null)
+            TextButton(
+              onPressed: m.busy ? null : m.refreshAccount,
+              child: const Text('Try again'),
+            ),
+        ],
+      ),
+    );
+  }
 }
 
 class CreateWorkspaceScreen extends StatefulWidget {
@@ -354,7 +532,7 @@ class _CreateWorkspaceScreenState extends State<CreateWorkspaceScreen> {
                       setState(() => uncertain = true);
                     }
                   },
-            child: Text(widget.model.busy ? 'Creating…' : 'Create workspace'),
+            child: Text(widget.model.busy ? 'Creatingâ€¦' : 'Create workspace'),
           ),
         ],
       ),

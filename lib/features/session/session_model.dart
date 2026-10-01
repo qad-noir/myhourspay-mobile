@@ -21,6 +21,8 @@ enum SessionPhase {
 
 class SessionModel extends ChangeNotifier {
   SessionModel(this.auth, this.hours, this.store) {
+    // Both repositories must share bearer state and the expiry callback.
+    assert(identical(auth.api, hours.api));
     auth.api.onSessionFailure = _sessionFailure;
   }
   final AuthRepository auth;
@@ -65,7 +67,7 @@ class SessionModel extends ChangeNotifier {
       await action();
       return true;
     } on ApiFailure catch (e) {
-      failure = e;
+      if (phase != SessionPhase.expired) failure = e;
       return false;
     } on FormatException {
       failure = const ApiFailure(
@@ -167,8 +169,11 @@ class SessionModel extends ChangeNotifier {
       phase = SessionPhase.restricted;
       return;
     }
+    final generation = _generation;
+    final result = await hours.workspaces();
+    if (generation != _generation || auth.api.token == null) return;
+    workspaces = result;
     phase = SessionPhase.authenticated;
-    workspaces = await hours.workspaces();
     if (workspaces.isEmpty || account!.onboardingRequired) {
       phase = SessionPhase.onboardingRequired;
     }
@@ -311,6 +316,8 @@ class SessionModel extends ChangeNotifier {
   void _sessionFailure(ApiFailure error) {
     failure = error;
     if (error.status == 401) {
+      failure = null;
+      notice = 'Your session has expired. Please sign in again.';
       unawaited(
         _clear(SessionPhase.expired).catchError((Object _) {
           failure = const ApiFailure(

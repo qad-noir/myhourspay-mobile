@@ -4,7 +4,7 @@ import '../core/api_client.dart';
 
 const brandInk = Color(0xff171421);
 const brandOrange = Color(0xffff6b35);
-const brandAction = Color(0xffc34312); // White label contrast exceeds 4.5:1.
+const brandAction = Color(0xffcf4515); // White label contrast exceeds 4.5:1.
 const brandSurface = Color(0xfffbf8f3);
 const brandMuted = Color(0xff686a76);
 const brandBorder = Color(0xffe3e0dc);
