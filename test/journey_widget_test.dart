@@ -147,7 +147,7 @@ void main() {
       await tester.pumpAndSettle();
       await tester.tap(find.text('Save hours'));
       await tester.pumpAndSettle();
-      expect(find.text('Hours saved to MHP.'), findsOneWidget);
+      expect(find.text('Hours saved.'), findsOneWidget);
       await tester.scrollUntilVisible(find.text('09:00 – 17:00'), 300);
       await tester.tap(find.text('09:00 – 17:00'));
       await tester.pumpAndSettle();
@@ -177,6 +177,11 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.text('Your time. In order.'), findsOneWidget);
       expect(find.text('Reload server version'), findsNothing);
+      expect(find.text('Signed out.'), findsOneWidget);
+      expect(model.notice, isNull);
+      await tester.pump(const Duration(seconds: 5));
+      await tester.pumpAndSettle();
+      expect(find.text('Signed out.'), findsNothing);
       expect(tester.takeException(), isNull);
       await tester.pumpWidget(const SizedBox());
     },

@@ -32,6 +32,9 @@ class SessionModel extends ChangeNotifier {
   Account? account;
   List<Workspace> workspaces = [];
   Workspace? workspace;
+  int? selectedWorkspaceId;
+  List<DeviceSession>? deviceSessions;
+  String? toast;
   HoursPage? page;
   DateTime week = weekStart(DateTime.now());
   Map<String, bool> providers = {};
@@ -230,6 +233,7 @@ class SessionModel extends ChangeNotifier {
   Future<void> selectWorkspace(Workspace value) async {
     ++_generation;
     workspace = value;
+    selectedWorkspaceId = value.id;
     page = null;
     failure = null;
     try {
@@ -279,6 +283,12 @@ class SessionModel extends ChangeNotifier {
     await reload();
   }
 
+  Future<void> selectWeek(DateTime date) async {
+    week = weekStart(date);
+    page = null;
+    await reload();
+  }
+
   void switchWorkspace() {
     ++_generation;
     workspace = null;
@@ -303,7 +313,8 @@ class SessionModel extends ChangeNotifier {
     } finally {
       try {
         await _clear(SessionPhase.signedOut);
-        notice = revoked ? 'Signed out.' : 'Signed out on this device. Server revocation could not be confirmed; revoke this device from another session when connected.';
+        notice = null;
+        toast = revoked ? 'Signed out.' : 'Signed out on this device. Server revocation could not be confirmed; revoke this device from another session when connected.';
       } catch (_) {
         failure = const ApiFailure(
           'storage_error',
@@ -330,6 +341,8 @@ class SessionModel extends ChangeNotifier {
     _challenge = null;
     _challengeExpiry = null;
     workspaces = [];
+    selectedWorkspaceId = null;
+    deviceSessions = null;
     workspace = null;
     page = null;
     loadingWeek = false;

@@ -115,9 +115,26 @@ class _EditHoursScreenState extends State<EditHoursScreen> {
     } on ApiFailure catch (e) {
       if (mounted) {
         setState(() {
-          failure = e;
+          failure = e.status == 404 && existing != null
+              ? const ApiFailure(
+                  'entry_unavailable',
+                  'This entry is unavailable for editing. Refresh your week; if it remains, contact support.',
+                  status: 404,
+                )
+              : e;
           conflict = e.status == 409;
           fields = e.fields.map((k, v) => MapEntry(k, v.join(' ')));
+          final dateError = fields['work_date']?.toLowerCase() ?? '';
+          if (dateError.contains('already been taken') ||
+              dateError.contains('already has an entry')) {
+            fields['work_date'] =
+                'This date already has an entry. Try editing it instead.';
+            failure = ApiFailure(
+              e.code,
+              fields['work_date']!,
+              status: e.status,
+            );
+          }
           form.currentState!.validate();
         });
       }
@@ -152,18 +169,18 @@ class _EditHoursScreenState extends State<EditHoursScreen> {
     }
     final replace = await showDialog<bool>(
       context: context,
-      builder: (_) => AlertDialog(
+      builder: (dialogContext) => AlertDialog(
         title: const Text('Use the server version?'),
         content: const Text(
           'This replaces the unsaved values in this form. Nothing will be saved automatically.',
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context, false),
+            onPressed: () => Navigator.pop(dialogContext, false),
             child: const Text('Keep my draft'),
           ),
           FilledButton(
-            onPressed: () => Navigator.pop(context, true),
+            onPressed: () => Navigator.pop(dialogContext, true),
             child: const Text('Load latest'),
           ),
         ],

@@ -61,14 +61,28 @@ class MhpApp extends StatefulWidget {
 }
 
 class _MhpAppState extends State<MhpApp> {
+  final messenger = GlobalKey<ScaffoldMessengerState>();
+  void showToast() {
+    final message = widget.model.toast;
+    if (message == null) return;
+    widget.model.toast = null;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      messenger.currentState?.hideCurrentSnackBar();
+      messenger.currentState?.showSnackBar(SnackBar(content: Text(message)));
+    });
+  }
+
   @override
   void initState() {
     super.initState();
+    widget.model.addListener(showToast);
     widget.model.restore();
   }
 
   @override
   void dispose() {
+    widget.model.removeListener(showToast);
     widget.model.dispose();
     super.dispose();
   }
@@ -76,6 +90,7 @@ class _MhpAppState extends State<MhpApp> {
   @override
   Widget build(BuildContext context) => MaterialApp(
     title: 'MyHoursPay',
+    scaffoldMessengerKey: messenger,
     debugShowCheckedModeBanner: false,
     theme: mhpTheme(),
     builder: phoneShell,

@@ -7,6 +7,7 @@ import '../session/session_model.dart';
 import '../timesheets/timesheet_screen.dart';
 import 'models.dart';
 import 'edit_hours_screen.dart';
+import 'week_calendar.dart';
 
 class HoursScreen extends StatefulWidget {
   const HoursScreen({super.key, required this.model, this.initialTab = 0});
@@ -19,11 +20,15 @@ class HoursScreen extends StatefulWidget {
 class _HoursScreenState extends State<HoursScreen> {
   late int tab = widget.initialTab;
   SessionModel get model => widget.model;
-  Future<void> edit({HoursEntry? entry}) async {
+  Future<void> edit({HoursEntry? entry, DateTime? initialDate}) async {
     ScaffoldMessenger.of(context).hideCurrentSnackBar();
     final saved = await Navigator.of(context).push<bool>(
       MaterialPageRoute(
-        builder: (_) => EditHoursScreen(model: model, entry: entry),
+        builder: (_) => EditHoursScreen(
+          model: model,
+          entry: entry,
+          initialDate: initialDate,
+        ),
       ),
     );
     if (saved == true) {
@@ -32,7 +37,7 @@ class _HoursScreenState extends State<HoursScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              model.failure == null ? 'Hours saved to MHP.' : 'Hours saved. Could not refresh the week; please try refreshing.',
+              model.failure == null ? 'Hours saved.' : 'Hours saved. Could not refresh the week; please try refreshing.',
             ),
           ),
         );
@@ -43,6 +48,8 @@ class _HoursScreenState extends State<HoursScreen> {
   @override
   Widget build(BuildContext context) {
     final w = model.workspace!;
+    final recent = List<HoursEntry>.of(model.page?.entries ?? [])
+      ..sort((a, b) => b.date.compareTo(a.date));
     final items = [
       ('Overview', Icons.home_outlined, Icons.home),
       ('Hours', Icons.schedule_outlined, Icons.schedule),
@@ -219,6 +226,25 @@ class _HoursScreenState extends State<HoursScreen> {
                         ),
                     ],
                   ),
+                  if (tab == 1)
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: TextButton.icon(
+                        onPressed: model.loadingWeek
+                            ? null
+                            : () async {
+                                final date = await selectHoursDate(
+                                  context,
+                                  model,
+                                );
+                                if (date != null && mounted) {
+                                  await model.selectWeek(date);
+                                }
+                              },
+                        icon: const Icon(Icons.calendar_month_outlined),
+                        label: const Text('Choose a date'),
+                      ),
+                    ),
                   const SizedBox(height: 16),
                   if (model.page != null && w.targetMinutes > 0)
                     LinearProgressIndicator(
@@ -244,7 +270,20 @@ class _HoursScreenState extends State<HoursScreen> {
                   else if (model.page != null) ...[
                     if (tab == 0) ...[
                       const SizedBox(height: 32),
-                      WeekChart(week: model.week, entries: model.page!.entries),
+                      WeekChart(
+                        week: model.week,
+                        entries: model.page!.entries,
+                        onDayTap: w.writable
+                            ? (day) => edit(
+                                initialDate: day,
+                                entry: model.page!.entries
+                                    .where(
+                                      (e) => dateKey(e.date) == dateKey(day),
+                                    )
+                                    .firstOrNull,
+                              )
+                            : null,
+                      ),
                       const SizedBox(height: 22),
                     ],
                     Row(
@@ -274,7 +313,7 @@ class _HoursScreenState extends State<HoursScreen> {
                       ),
                     for (final e
                         in (tab == 0
-                            ? model.page!.entries.take(3)
+                            ? recent.take(3)
                             : model.page!.entries)) ...[
                       EntryRow(
                         entry: e,
@@ -328,7 +367,13 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
   Widget build(BuildContext context) {
     final m = widget.model;
     final selection = m.workspaces
-        .where((w) => w.id == (selected ?? m.workspaces.firstOrNull?.id))
+        .where(
+          (w) =>
+              w.id ==
+              (selected ??
+                  m.selectedWorkspaceId ??
+                  m.workspaces.firstOrNull?.id),
+        )
         .firstOrNull;
     return Scaffold(
       appBar: AppBar(

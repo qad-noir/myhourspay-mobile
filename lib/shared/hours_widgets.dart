@@ -97,9 +97,15 @@ class EntryRow extends StatelessWidget {
 }
 
 class WeekChart extends StatelessWidget {
-  const WeekChart({super.key, required this.week, required this.entries});
+  const WeekChart({
+    super.key,
+    required this.week,
+    required this.entries,
+    this.onDayTap,
+  });
   final DateTime week;
   final List<HoursEntry> entries;
+  final ValueChanged<DateTime>? onDayTap;
   @override
   Widget build(BuildContext context) {
     final totals = List.generate(
@@ -114,52 +120,63 @@ class WeekChart extends StatelessWidget {
         7,
         (i) => '${shortDays[i]}: ${durationLabel(totals[i])}',
       ).join(', '),
-      child: ExcludeSemantics(
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.end,
-          children: [
-            for (var i = 0; i < 7; i++)
-              Expanded(
-                child: Padding(
-                  padding: EdgeInsets.only(right: i == 6 ? 0 : 9),
-                  child: Column(
-                    children: [
-                      Text(
-                        totals[i] == 0
-                            ? '–'
-                            : '${(totals[i] / 60).toStringAsFixed(totals[i] % 60 == 0 ? 0 : 1)}h',
-                        style: const TextStyle(fontSize: 12),
-                      ),
-                      const SizedBox(height: 6),
-                      Container(
-                        height: 72,
-                        alignment: Alignment.bottomCenter,
-                        decoration: BoxDecoration(
-                          color: const Color(0xffeeece9),
-                          borderRadius: BorderRadius.circular(6),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.end,
+        children: [
+          for (var i = 0; i < 7; i++)
+            Expanded(
+              child: Semantics(
+                button: onDayTap != null,
+                label:
+                    '${shortDays[i]}: ${durationLabel(totals[i])}. ${entries.any((e) => dateKey(e.date) == dateKey(week.add(Duration(days: i)))) ? 'Edit hours' : 'Add hours'}',
+                child: InkWell(
+                  onTap: onDayTap == null
+                      ? null
+                      : () => onDayTap!(week.add(Duration(days: i))),
+                  child: Padding(
+                    padding: EdgeInsets.only(right: i == 6 ? 0 : 9),
+                    child: Column(
+                      children: [
+                        Text(
+                          totals[i] == 0
+                              ? '–'
+                              : '${(totals[i] / 60).toStringAsFixed(totals[i] % 60 == 0 ? 0 : 1)}h',
+                          style: const TextStyle(fontSize: 12),
                         ),
-                        child: FractionallySizedBox(
-                          heightFactor: totals[i] / max,
-                          widthFactor: 1,
-                          child: Container(
-                            decoration: BoxDecoration(
-                              color: brandOrange,
-                              borderRadius: BorderRadius.circular(6),
+                        const SizedBox(height: 6),
+                        Container(
+                          height: 72,
+                          alignment: Alignment.bottomCenter,
+                          decoration: BoxDecoration(
+                            color: const Color(0xffeeece9),
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: FractionallySizedBox(
+                            heightFactor: totals[i] / max,
+                            widthFactor: 1,
+                            child: Container(
+                              decoration: BoxDecoration(
+                                color: brandOrange,
+                                borderRadius: BorderRadius.circular(6),
+                              ),
                             ),
                           ),
                         ),
-                      ),
-                      const SizedBox(height: 7),
-                      Text(
-                        shortDays[i],
-                        style: const TextStyle(color: brandMuted, fontSize: 12),
-                      ),
-                    ],
+                        const SizedBox(height: 7),
+                        Text(
+                          shortDays[i],
+                          style: const TextStyle(
+                            color: brandMuted,
+                            fontSize: 12,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ),
-          ],
-        ),
+            ),
+        ],
       ),
     );
   }

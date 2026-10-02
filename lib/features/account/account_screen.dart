@@ -19,6 +19,8 @@ class _AccountScreenState extends State<AccountScreen> {
   @override
   void initState() {
     super.initState();
+    sessions = widget.model.deviceSessions ?? [];
+    loading = widget.model.deviceSessions == null;
     load();
   }
 
@@ -29,7 +31,10 @@ class _AccountScreenState extends State<AccountScreen> {
     });
     try {
       final result = await widget.model.auth.sessions();
-      if (mounted) setState(() => sessions = result);
+      if (mounted) {
+        widget.model.deviceSessions = result;
+        setState(() => sessions = result);
+      }
     } on ApiFailure catch (e) {
       if (mounted) setState(() => failure = e);
     } catch (_) {
@@ -42,39 +47,56 @@ class _AccountScreenState extends State<AccountScreen> {
         );
       }
     } finally {
-      if (mounted) setState(() => loading = false);
+      if (mounted) {
+        setState(() => loading = false);
+      }
     }
   }
 
   Future<void> revoke(DeviceSession session) async {
     final confirmed = await showDialog<bool>(
       context: context,
-      builder: (_) => AlertDialog(
+      builder: (dialogContext) => AlertDialog(
         title: const Text('Revoke this device?'),
         content: Text('${session.name} will need to sign in again.'),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context, false),
+            onPressed: () => Navigator.pop(dialogContext, false),
             child: const Text('Cancel'),
           ),
           FilledButton(
-            onPressed: () => Navigator.pop(context, true),
+            onPressed: () => Navigator.pop(dialogContext, true),
             child: const Text('Revoke'),
           ),
         ],
       ),
     );
     if (confirmed != true || !mounted) return;
-    setState(() => loading = true);
+    setState(() {
+      loading = true;
+      failure = null;
+    });
     try {
       await widget.model.auth.revoke(session.id);
-      await load();
+      if (!mounted) return;
+      setState(() => sessions.removeWhere((item) => item.id == session.id));
+      widget.model.deviceSessions = List.of(sessions);
+      ScaffoldMessenger.of(context)
+          .showSnackBar(const SnackBar(content: Text('Device revoked.')));
     } on ApiFailure catch (e) {
+      if (mounted) setState(() => failure = e);
+    } catch (_) {
       if (mounted) {
-        setState(() {
-          failure = e;
-          loading = false;
-        });
+        setState(
+          () => failure = const ApiFailure(
+            'device_error',
+            'Could not revoke this device. Please try again.',
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => loading = false);
       }
     }
   }
@@ -149,7 +171,7 @@ class _AccountScreenState extends State<AccountScreen> {
           const SizedBox(height: 28),
           const SectionLabel('DEVICES'),
           ErrorNotice(failure),
-          if (loading)
+          if (loading && widget.model.deviceSessions == null)
             const LoadingCards()
           else if (sessions.isEmpty)
             const InfoPanel('No device sessions are available.')
@@ -199,7 +221,9 @@ class _AccountScreenState extends State<AccountScreen> {
                           sessions[i].current
                               ? const StatusBadge('Current', success: true)
                               : TextButton(
-                                  onPressed: () => revoke(sessions[i]),
+                                  onPressed: loading
+                                      ? null
+                                      : () => revoke(sessions[i]),
                                   child: const Text('Revoke'),
                                 ),
                         ],

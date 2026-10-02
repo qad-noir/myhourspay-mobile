@@ -111,7 +111,7 @@ void main() {
     expect(store.value, isNull);
     expect(api.token, isNull);
     expect(model.workspace, isNull);
-    expect(model.notice, contains('could not be confirmed'));
+    expect(model.toast, contains('could not be confirmed'));
     model.dispose();
   });
   test(

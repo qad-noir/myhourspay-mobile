@@ -100,8 +100,9 @@ void main() {
       var created = false;
       final model = modelFor(
         MockClient((r) async {
-          if (r.url.path.endsWith('/auth/providers'))
+          if (r.url.path.endsWith('/auth/providers')) {
             return response({'data': {}});
+          }
           if (r.method == 'POST') {
             created = true;
             return response({'data': workspace}, 201);

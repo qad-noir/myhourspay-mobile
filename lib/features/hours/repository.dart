@@ -31,7 +31,14 @@ class HoursRepository {
     (await api.request('POST', '/workspaces', body: input))['data'] as Json,
   );
   Future<HoursPage> week(int workspace, DateTime start) async {
-    final end = DateTime(start.year, start.month, start.day + 6);
+    return range(
+      workspace,
+      start,
+      DateTime(start.year, start.month, start.day + 6),
+    );
+  }
+
+  Future<HoursPage> range(int workspace, DateTime start, DateTime end) async {
     final first = HoursPage.fromJson(
       await api.request(
         'GET',
