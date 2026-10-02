@@ -63,6 +63,15 @@ class _EditHoursScreenState extends State<EditHoursScreen> {
       if (mounted) setState(() => projects = result);
     } on ApiFailure catch (e) {
       if (mounted) setState(() => projectFailure = e);
+    } catch (_) {
+      if (mounted) {
+        setState(
+          () => projectFailure = const ApiFailure(
+            'invalid_response',
+            'Could not read projects. Please try again.',
+          ),
+        );
+      }
     } finally {
       if (mounted) setState(() => projectsLoading = false);
     }

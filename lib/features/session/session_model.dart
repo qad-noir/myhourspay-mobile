@@ -206,9 +206,26 @@ class SessionModel extends ChangeNotifier {
     await _routeAccount();
   });
   Future<bool> createWorkspace(Json input) => perform(() async {
-    await hours.createWorkspace(input);
-    account = await auth.me();
-    await _routeAccount();
+    final created = await hours.createWorkspace(input);
+    workspaces = [...workspaces.where((w) => w.id != created.id), created];
+    notice = 'Workspace created successfully.';
+    // Creation is already confirmed. A failed subsequent read must not invite
+    // another POST or hide the new workspace from the user.
+    try {
+      account = await auth.me();
+      await _routeAccount();
+    } on ApiFailure catch (e) {
+      if (phase != SessionPhase.expired) {
+        failure = e;
+        notice = 'Workspace created. Could not refresh the workspace list. Please try refreshing.';
+      }
+    } on FormatException {
+      notice =
+          'Workspace created. Could not read the refreshed workspace list.';
+    } on TypeError {
+      notice =
+          'Workspace created. Could not read the refreshed workspace list.';
+    }
   });
   Future<void> selectWorkspace(Workspace value) async {
     ++_generation;

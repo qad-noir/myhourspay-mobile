@@ -5,6 +5,7 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:flutter/material.dart';
 
 import '../../shared/widgets.dart';
+import '../../core/api_client.dart';
 import '../session/session_model.dart';
 
 String get deviceName {
@@ -541,6 +542,7 @@ class ForgotPasswordDialog extends StatefulWidget {
 }
 
 class _ForgotPasswordDialogState extends State<ForgotPasswordDialog> {
+  final form = GlobalKey<FormState>();
   late final email = TextEditingController(text: widget.initialEmail);
   bool busy = false, sent = false;
   String? error;
@@ -553,38 +555,66 @@ class _ForgotPasswordDialogState extends State<ForgotPasswordDialog> {
   @override
   Widget build(BuildContext context) => AlertDialog(
     title: const Text('Reset password'),
-    content: SingleChildScrollView(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          if (sent)
-            const Text(
-              'If the account exists, a reset link has been sent. Complete the reset using the secure page in the email.',
-            )
-          else
-            TextField(
-              controller: email,
-              keyboardType: TextInputType.emailAddress,
-              decoration: const InputDecoration(labelText: 'Email address'),
-            ),
-          if (error != null) Text(error!),
-        ],
+    content: Form(
+      key: form,
+      child: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (sent)
+              const Text(
+                'If the account exists, a reset link has been sent. Complete the reset using the secure page in the email.',
+              )
+            else
+              TextFormField(
+                controller: email,
+                enabled: !busy,
+                autofillHints: const [AutofillHints.email],
+                keyboardType: TextInputType.emailAddress,
+                decoration: const InputDecoration(labelText: 'Email address'),
+                validator: (value) =>
+                    RegExp(r'^[^\s@]+@[^\s@]+\.[^\s@]+$')
+                        .hasMatch(value?.trim() ?? '')
+                    ? null
+                    : 'Enter a valid email address.',
+              ),
+            if (busy) ...[
+              const SizedBox(height: 16),
+              const LinearProgressIndicator(),
+              const SizedBox(height: 8),
+              const Text('Requesting a reset link…'),
+            ],
+            if (error != null) Text(error!),
+          ],
+        ),
       ),
     ),
     actions: [
       TextButton(
         onPressed: busy ? null : () => Navigator.pop(context),
-        child: const Text('Close'),
+        child: Text(sent ? 'Done' : 'Close'),
       ),
       if (!sent)
         FilledButton(
           onPressed: busy
               ? null
               : () async {
-                  setState(() => busy = true);
+                  if (!form.currentState!.validate()) return;
+                  setState(() {
+                    busy = true;
+                    error = null;
+                  });
                   try {
                     await widget.model.auth.forgot(email.text.trim());
                     if (mounted) setState(() => sent = true);
+                  } on ApiFailure catch (failure) {
+                    if (mounted) {
+                      setState(
+                        () => error = failure.code == 'timeout'
+                            ? 'The reset request was not confirmed. Check your email before requesting another link.'
+                            : friendlyFailure(failure),
+                      );
+                    }
                   } catch (_) {
                     if (mounted) {
                       setState(

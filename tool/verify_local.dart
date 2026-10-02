@@ -24,7 +24,14 @@ Future<void> main(List<String> args) async {
     throw StateError('Local hosts only.');
   }
   tz.initializeTimeZones();
-  final text = await File(args[1]).readAsString();
+  final credentials = await File(args[1]).readAsString();
+  final sections = credentials.split(RegExp(r'^#login[-\s]*', multiLine: true));
+  final text = sections.length > 1
+      ? sections.firstWhere(
+          (section) => section.trimLeft().startsWith('local'),
+          orElse: () => throw StateError('Missing local credential section.'),
+        )
+      : credentials;
   final email = RegExp(r'[A-Za-z0-9._%+\-]+@[A-Za-z0-9.\-]+\.[A-Za-z]{2,}')
       .firstMatch(text)
       ?.group(0);

@@ -326,6 +326,15 @@ class _ReviewTimesheetScreenState extends State<ReviewTimesheetScreen> {
       }
     } on ApiFailure catch (e) {
       if (mounted) setState(() => failure = e);
+    } catch (_) {
+      if (mounted) {
+        setState(
+          () => failure = const ApiFailure(
+            'invalid_response',
+            'Could not read this timesheet. Please reload.',
+          ),
+        );
+      }
     } finally {
       if (mounted) setState(() => loading = false);
     }

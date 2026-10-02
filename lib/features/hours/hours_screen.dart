@@ -29,8 +29,13 @@ class _HoursScreenState extends State<HoursScreen> {
     if (saved == true) {
       await model.reload();
       if (mounted) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(const SnackBar(content: Text('Hours saved to MHP.')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              model.failure == null ? 'Hours saved to MHP.' : 'Hours saved. Could not refresh the week; please try refreshing.',
+            ),
+          ),
+        );
       }
     }
   }
@@ -453,6 +458,7 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
               'Your workspace starts here. Create one to begin recording your hours.',
             ),
           ErrorNotice(m.failure),
+          Notice(m.notice),
           if (m.failure != null)
             TextButton(
               onPressed: m.busy ? null : m.refreshAccount,
@@ -472,11 +478,61 @@ class CreateWorkspaceScreen extends StatefulWidget {
 }
 
 class _CreateWorkspaceScreenState extends State<CreateWorkspaceScreen> {
+  final form = GlobalKey<FormState>();
   final name = TextEditingController(),
       position = TextEditingController(),
       breaks = TextEditingController(text: '30'),
-      target = TextEditingController(text: '2400');
+      target = TextEditingController(text: '40');
   bool paid = false, uncertain = false;
+  Map<String, List<String>> fields = {};
+
+  Future<void> create() async {
+    fields = {};
+    if (!form.currentState!.validate()) return;
+    final success = await widget.model.createWorkspace({
+      'name': name.text.trim(),
+      'position': position.text.trim(),
+      'default_break_minutes': int.parse(breaks.text),
+      'default_break_type': paid ? 'paid' : 'unpaid',
+      'weekly_target_minutes': (double.parse(target.text) * 60).round(),
+    });
+    if (!mounted) return;
+    if (success) {
+      // First-workspace onboarding may have already replaced this route.
+      if (Navigator.canPop(context)) Navigator.pop(context);
+    } else {
+      setState(() {
+        fields = widget.model.failure?.fields ?? {};
+        uncertain = widget.model.failure?.uncertain == true;
+      });
+      form.currentState!.validate();
+    }
+  }
+
+  String? validate(String key, String? value) {
+    if (fields[key]?.isNotEmpty == true) return fields[key]!.join(' ');
+    final text = value?.trim() ?? '';
+    if (key == 'name' || key == 'position') {
+      return text.length < 3 || text.length > 100
+          ? 'Enter 3–100 characters.'
+          : null;
+    }
+    if (key == 'default_break_minutes') {
+      final minutes = int.tryParse(text);
+      return minutes == null || minutes < 0 || minutes > 1439
+          ? 'Enter 0–1439 minutes.'
+          : null;
+    }
+    final hours = double.tryParse(text);
+    if (hours == null || !hours.isFinite || hours < 1 || hours > 168) {
+      return 'Enter a weekly target between 1 and 168 hours.';
+    }
+    if ((hours * 60 - (hours * 60).round()).abs() > 0.000001) {
+      return 'Use a target that is a whole number of minutes, for example 37.5 hours.';
+    }
+    return null;
+  }
+
   @override
   void dispose() {
     name.dispose();
@@ -491,55 +547,49 @@ class _CreateWorkspaceScreenState extends State<CreateWorkspaceScreen> {
     listenable: widget.model,
     builder: (context, _) => Scaffold(
       appBar: AppBar(title: const Text('Create workspace')),
-      body: PageBody(
-        children: [
-          for (final item in [
-            (name, 'Workspace name'),
-            (position, 'Your position'),
-            (breaks, 'Default break (minutes)'),
-            (target, 'Weekly target (minutes)'),
-          ])
-            Padding(
-              padding: const EdgeInsets.only(bottom: 20),
-              child: TextField(
-                controller: item.$1,
-                enabled: !widget.model.busy && !uncertain,
-                decoration: InputDecoration(labelText: item.$2),
+      body: Form(
+        key: form,
+        child: PageBody(
+          footer: FilledButton(
+            onPressed: widget.model.busy || uncertain ? null : create,
+            child: Text(widget.model.busy ? 'Creating…' : 'Create workspace'),
+          ),
+          children: [
+            for (final item in [
+              (name, 'Workspace name', 'name'),
+              (position, 'Your position', 'position'),
+              (breaks, 'Default break (minutes)', 'default_break_minutes'),
+              (target, 'Weekly target (hours)', 'weekly_target_minutes'),
+            ])
+              Padding(
+                padding: const EdgeInsets.only(bottom: 20),
+                child: TextFormField(
+                  controller: item.$1,
+                  enabled: !widget.model.busy && !uncertain,
+                  decoration: InputDecoration(labelText: item.$2),
+                  keyboardType: item.$1 == target
+                      ? const TextInputType.numberWithOptions(decimal: true)
+                      : item.$1 == breaks
+                      ? TextInputType.number
+                      : TextInputType.text,
+                  validator: (value) => validate(item.$3, value),
+                  onChanged: (_) => fields.remove(item.$3),
+                ),
               ),
+            SwitchListTile(
+              title: const Text('Paid break by default'),
+              value: paid,
+              onChanged: widget.model.busy || uncertain
+                  ? null
+                  : (v) => setState(() => paid = v),
             ),
-          SwitchListTile(
-            title: const Text('Paid break by default'),
-            value: paid,
-            onChanged: widget.model.busy || uncertain
-                ? null
-                : (v) => setState(() => paid = v),
-          ),
-          ErrorNotice(widget.model.failure),
-          if (uncertain)
-            const Notice(
-              'The request may have succeeded. Return to workspaces and reload before creating another.',
-            ),
-          FilledButton(
-            onPressed: widget.model.busy || uncertain
-                ? null
-                : () async {
-                    final success = await widget.model.createWorkspace({
-                      'name': name.text.trim(),
-                      'position': position.text.trim(),
-                      'default_break_minutes': int.tryParse(breaks.text) ?? -1,
-                      'default_break_type': paid ? 'paid' : 'unpaid',
-                      'weekly_target_minutes': int.tryParse(target.text) ?? -1,
-                    });
-                    if (!context.mounted) return;
-                    if (success) {
-                      Navigator.pop(context);
-                    } else if (widget.model.failure?.uncertain == true) {
-                      setState(() => uncertain = true);
-                    }
-                  },
-            child: Text(widget.model.busy ? 'Creatingâ€¦' : 'Create workspace'),
-          ),
-        ],
+            ErrorNotice(widget.model.failure),
+            if (uncertain)
+              const Notice(
+                'The request may have succeeded. Return to workspaces and reload before creating another.',
+              ),
+          ],
+        ),
       ),
     ),
   );
