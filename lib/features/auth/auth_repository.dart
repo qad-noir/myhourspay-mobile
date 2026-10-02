@@ -1,8 +1,9 @@
 import '../../core/api_client.dart';
+import '../../core/json_fields.dart';
 
 class Account {
   Account.fromJson(Json json)
-    : id = json['id'] as int,
+    : id = jsonId(json['id']),
       name = json['name'] as String,
       email = json['email'] as String,
       verified = json['email_verified'] as bool,
@@ -40,7 +41,7 @@ class AuthResult {
 
 class DeviceSession {
   DeviceSession.fromJson(Json json)
-    : id = json['id'] as int,
+    : id = jsonId(json['id']),
       name = json['device_name'] as String,
       current = json['current'] as bool,
       expiresAt = json['expires_at'] as String?,

@@ -1,6 +1,7 @@
 import 'package:timezone/timezone.dart' as tz;
 
 import '../../core/api_client.dart';
+import '../../core/json_fields.dart';
 
 String dateKey(DateTime date) =>
     '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
@@ -14,7 +15,7 @@ DateTime workspaceToday(String zone) {
 
 class Workspace {
   Workspace.fromJson(Json json)
-    : id = json['id'] as int,
+    : id = jsonId(json['id']),
       name = json['name'] as String,
       role = json['role'] as String,
       currency = json['currency'] as String?,
@@ -35,7 +36,7 @@ class Workspace {
 
 class Project {
   Project.fromJson(Json json)
-    : id = json['id'] as int,
+    : id = jsonId(json['id']),
       name = json['name'] as String;
   final int id;
   final String name;
@@ -43,8 +44,8 @@ class Project {
 
 class HoursEntry {
   HoursEntry.fromJson(Json json)
-    : id = json['id'] as int,
-      workspaceId = json['workspace_id'] as int,
+    : id = jsonId(json['id']),
+      workspaceId = jsonId(json['workspace_id']),
       date = DateTime.parse(json['work_date'] as String),
       start = json['start_time'] as String,
       end = json['end_time'] as String,
@@ -53,7 +54,7 @@ class HoursEntry {
       notes = json['notes'] as String? ?? '',
       netMinutes = json['net_minutes'] as int,
       version = json['version'] as String,
-      projectId = json['project_id'] as int?,
+      projectId = nullableJsonId(json['project_id']),
       billable = json['billable'] as bool;
   final int id, workspaceId, breakMinutes, netMinutes;
   final DateTime date;

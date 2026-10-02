@@ -1,10 +1,11 @@
 import '../../core/api_client.dart';
+import '../../core/json_fields.dart';
 import '../hours/models.dart';
 import '../hours/repository.dart';
 
 class Timesheet {
   Timesheet.fromJson(Json json)
-    : id = json['id'] as int,
+    : id = jsonId(json['id']),
       status = json['status'] as String,
       weekStart = json['week_start'] as String,
       version = json['version'] as String,
