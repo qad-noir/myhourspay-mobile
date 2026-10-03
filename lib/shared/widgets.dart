@@ -300,6 +300,12 @@ class LoadingCards extends StatelessWidget {
 }
 
 String friendlyFailure(ApiFailure f) {
+  if (f.code == 'account_link_required') {
+    return 'This email already has an MHP account. Sign in with your password before linking Google.';
+  }
+  if (f.code == 'credential_already_used') {
+    return 'Start a new Google or Apple sign-in attempt.';
+  }
   if (f.code == 'invalid_credentials') {
     return 'The email or password is incorrect.';
   }

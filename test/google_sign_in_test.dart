@@ -12,6 +12,7 @@ import 'package:myhourspay/features/auth/google_identity.dart';
 import 'package:myhourspay/features/hours/repository.dart';
 import 'package:myhourspay/features/session/session_model.dart';
 import 'package:myhourspay/main.dart';
+import 'package:myhourspay/shared/widgets.dart';
 
 import 'support/fixtures.dart';
 
@@ -31,6 +32,28 @@ SessionModel createModel(MockClient client, MemorySessionStore store) {
 }
 
 void main() {
+  test('provider conflicts show account linking or fresh sign-in guidance', () {
+    expect(
+      friendlyFailure(
+        const ApiFailure(
+          'account_link_required',
+          'Server message',
+          status: 409,
+        ),
+      ),
+      contains('Sign in with your password'),
+    );
+    expect(
+      friendlyFailure(
+        const ApiFailure(
+          'credential_already_used',
+          'Server message',
+          status: 409,
+        ),
+      ),
+      contains('new Google or Apple'),
+    );
+  });
   for (final status in [
     'authenticated',
     'email_verification_required',

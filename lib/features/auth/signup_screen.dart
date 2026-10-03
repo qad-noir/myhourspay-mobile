@@ -462,7 +462,7 @@ class _SignupScreenState extends State<SignupScreen> {
                     const Padding(
                       padding: EdgeInsets.only(bottom: 12),
                       child: Text(
-                        'Promotional consent above applies to email/password registration only. Google registration does not save that preference yet.',
+                          'Promotional consent above applies to email/password registration only. Google registration does not save that preference.',
                         style: TextStyle(color: brandMuted, fontSize: 12),
                       ),
                     ),
