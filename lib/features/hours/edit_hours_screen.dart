@@ -154,13 +154,25 @@ class _EditHoursScreenState extends State<EditHoursScreen> {
 
   Future<void> reloadConflict() async {
     // Keep this form intact until the user explicitly chooses the latest server entry.
-    await widget.model.reload();
-    if (!mounted) return;
-    if (widget.model.failure != null) {
-      setState(() => failure = widget.model.failure);
+    HoursPage refreshed;
+    try {
+      refreshed = await widget.model.hours.week(workspace.id, weekStart(date));
+    } on ApiFailure catch (e) {
+      if (mounted) setState(() => failure = e);
+      return;
+    } catch (_) {
+      if (mounted) {
+        setState(
+          () => failure = const ApiFailure(
+            'invalid_response',
+            'Could not read the server’s hours response.',
+          ),
+        );
+      }
       return;
     }
-    final latest = widget.model.page?.entries
+    if (!mounted) return;
+    final latest = refreshed.entries
         .where((e) => e.id == existing?.id)
         .firstOrNull;
     if (latest == null || failure?.code == 'timesheet_locked') {

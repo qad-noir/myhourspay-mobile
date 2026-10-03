@@ -17,9 +17,34 @@ class HoursScreen extends StatefulWidget {
   State<HoursScreen> createState() => _HoursScreenState();
 }
 
-class _HoursScreenState extends State<HoursScreen> {
+class _HoursScreenState extends State<HoursScreen> with WidgetsBindingObserver {
   late int tab = widget.initialTab;
   SessionModel get model => widget.model;
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted && tab == 0) model.ensureOverview();
+    });
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) model.ensureOverview();
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  void selectTab(int value) {
+    setState(() => tab = value);
+    if (value == 0) model.ensureOverview();
+  }
+
   Future<void> edit({HoursEntry? entry, DateTime? initialDate}) async {
     ScaffoldMessenger.of(context).hideCurrentSnackBar();
     final saved = await Navigator.of(context).push<bool>(
@@ -33,6 +58,9 @@ class _HoursScreenState extends State<HoursScreen> {
     );
     if (saved == true) {
       await model.reload();
+      if (model.workspace != null && model.week != model.overviewWeek) {
+        await model.reloadOverview();
+      }
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -48,7 +76,11 @@ class _HoursScreenState extends State<HoursScreen> {
   @override
   Widget build(BuildContext context) {
     final w = model.workspace!;
-    final recent = List<HoursEntry>.of(model.page?.entries ?? [])
+    final shownWeek = tab == 0 ? model.overviewWeek : model.week;
+    final shownPage = tab == 0 ? model.overviewData : model.page;
+    final shownLoading = tab == 0 ? model.overviewLoading : model.loadingWeek;
+    final shownFailure = tab == 0 ? model.overviewFailure : model.failure;
+    final recent = List<HoursEntry>.of(shownPage?.entries ?? [])
       ..sort((a, b) => b.date.compareTo(a.date));
     final items = [
       ('Overview', Icons.home_outlined, Icons.home),
@@ -76,7 +108,7 @@ class _HoursScreenState extends State<HoursScreen> {
                         child: Semantics(
                           selected: tab == i,
                           child: InkWell(
-                            onTap: () => setState(() => tab = i),
+                            onTap: () => selectTab(i),
                             child: Padding(
                               padding: const EdgeInsets.symmetric(vertical: 10),
                               child: Column(
@@ -117,8 +149,12 @@ class _HoursScreenState extends State<HoursScreen> {
                 child: Padding(
                   padding: const EdgeInsets.fromLTRB(22, 10, 22, 14),
                   child: FilledButton.icon(
-                    onPressed: w.writable && !model.loadingWeek
-                        ? () => edit()
+                    onPressed: w.writable && !shownLoading
+                        ? () => edit(
+                            initialDate: tab == 0
+                                ? workspaceToday(w.timezone)
+                                : null,
+                          )
                         : null,
                     icon: const Icon(Icons.add, color: Colors.white),
                     label: const Text('Add hours'),
@@ -195,7 +231,7 @@ class _HoursScreenState extends State<HoursScreen> {
                             ),
                             const SizedBox(height: 3),
                             Text(
-                              weekLabel(model.week),
+                              weekLabel(shownWeek),
                               style: const TextStyle(
                                 color: brandMuted,
                                 fontSize: 15,
@@ -204,13 +240,13 @@ class _HoursScreenState extends State<HoursScreen> {
                           ],
                         ),
                       ),
-                      if (model.page != null)
+                      if (shownPage != null)
                         Flexible(
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.end,
                             children: [
                               Text(
-                                durationLabel(model.page!.totalMinutes),
+                                durationLabel(shownPage.totalMinutes),
                                 style: titleStyle.copyWith(fontSize: 24),
                               ),
                               if (w.targetMinutes > 0)
@@ -230,7 +266,7 @@ class _HoursScreenState extends State<HoursScreen> {
                     Align(
                       alignment: Alignment.centerLeft,
                       child: TextButton.icon(
-                        onPressed: model.loadingWeek
+                        onPressed: shownLoading
                             ? null
                             : () async {
                                 final date = await selectHoursDate(
@@ -246,9 +282,9 @@ class _HoursScreenState extends State<HoursScreen> {
                       ),
                     ),
                   const SizedBox(height: 16),
-                  if (model.page != null && w.targetMinutes > 0)
+                  if (shownPage != null && w.targetMinutes > 0)
                     LinearProgressIndicator(
-                      value: (model.page!.totalMinutes / w.targetMinutes).clamp(
+                      value: (shownPage.totalMinutes / w.targetMinutes).clamp(
                         0,
                         1,
                       ),
@@ -261,22 +297,22 @@ class _HoursScreenState extends State<HoursScreen> {
                     const Notice(
                       'This workspace is read-only. You can view your hours.',
                     ),
-                  ErrorNotice(model.failure),
-                  if (model.loadingWeek)
+                  ErrorNotice(shownFailure),
+                  if (shownLoading)
                     const Padding(
                       padding: EdgeInsets.only(top: 24),
                       child: LoadingCards(),
                     )
-                  else if (model.page != null) ...[
+                  else if (shownPage != null) ...[
                     if (tab == 0) ...[
                       const SizedBox(height: 32),
                       WeekChart(
-                        week: model.week,
-                        entries: model.page!.entries,
+                        week: shownWeek,
+                        entries: shownPage.entries,
                         onDayTap: w.writable
                             ? (day) => edit(
                                 initialDate: day,
-                                entry: model.page!.entries
+                                entry: shownPage.entries
                                     .where(
                                       (e) => dateKey(e.date) == dateKey(day),
                                     )
@@ -299,12 +335,17 @@ class _HoursScreenState extends State<HoursScreen> {
                         ),
                         if (tab == 0)
                           TextButton(
-                            onPressed: () => setState(() => tab = 1),
+                            onPressed: () {
+                              selectTab(1);
+                              if (model.week != model.overviewWeek) {
+                                model.selectWeek(model.overviewWeek);
+                              }
+                            },
                             child: const Text('See all'),
                           ),
                       ],
                     ),
-                    if (model.page!.entries.isEmpty)
+                    if (shownPage.entries.isEmpty)
                       const Padding(
                         padding: EdgeInsets.symmetric(vertical: 24),
                         child: InfoPanel(
@@ -312,9 +353,7 @@ class _HoursScreenState extends State<HoursScreen> {
                         ),
                       ),
                     for (final e
-                        in (tab == 0
-                            ? recent.take(3)
-                            : model.page!.entries)) ...[
+                        in (tab == 0 ? recent.take(3) : shownPage.entries)) ...[
                       EntryRow(
                         entry: e,
                         onTap: w.writable ? () => edit(entry: e) : null,
@@ -322,25 +361,29 @@ class _HoursScreenState extends State<HoursScreen> {
                       const Divider(),
                     ],
                   ],
-                  if (tab == 1 || model.failure != null)
+                  if (tab == 1 || shownFailure != null)
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         IconButton(
                           tooltip: 'Previous week',
-                          onPressed: model.loadingWeek
+                          onPressed: shownLoading || tab == 0
                               ? null
                               : () => model.moveWeek(-7),
                           icon: const Icon(Icons.chevron_left),
                         ),
                         TextButton.icon(
-                          onPressed: model.loadingWeek ? null : model.reload,
+                          onPressed: shownLoading
+                              ? null
+                              : tab == 0
+                              ? model.reloadOverview
+                              : model.reload,
                           icon: const Icon(Icons.refresh, size: 18),
                           label: const Text('Refresh'),
                         ),
                         IconButton(
                           tooltip: 'Next week',
-                          onPressed: model.loadingWeek
+                          onPressed: shownLoading || tab == 0
                               ? null
                               : () => model.moveWeek(7),
                           icon: const Icon(Icons.chevron_right),

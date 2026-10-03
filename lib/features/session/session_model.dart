@@ -36,6 +36,23 @@ class SessionModel extends ChangeNotifier {
   List<DeviceSession>? deviceSessions;
   String? toast;
   HoursPage? page;
+  HoursPage? _overviewPage;
+  DateTime? _overviewLoadedWeek;
+  ApiFailure? overviewFailure;
+  bool loadingOverview = false;
+  int _overviewGeneration = 0;
+  StoredSession? _storedSession;
+  Future<void> _workspaceWrite = Future.value();
+  int _pendingWorkspaceWrites = 0;
+  DateTime get overviewWeek => weekStart(workspaceToday(workspace!.timezone));
+  HoursPage? get overviewData => _overviewLoadedWeek == overviewWeek
+      ? _overviewPage
+      : week == overviewWeek
+      ? page
+      : null;
+  bool get overviewLoading =>
+      loadingOverview ||
+      (week == overviewWeek && loadingWeek && overviewData == null);
   DateTime week = weekStart(DateTime.now());
   Map<String, bool> providers = {};
   ApiFailure? failure;
@@ -113,10 +130,22 @@ class SessionModel extends ChangeNotifier {
         await _clear(SessionPhase.expired);
         return;
       }
+      _storedSession = saved;
+      selectedWorkspaceId = saved.workspaceId;
       auth.api.token = saved.token;
       _scheduleExpiry(saved.expiresAt);
       account = await auth.me();
       await _routeAccount();
+      if (phase == SessionPhase.authenticated && saved.workspaceId != null) {
+        final remembered = workspaces
+            .where((w) => w.id == saved.workspaceId)
+            .firstOrNull;
+        if (remembered != null) {
+          await selectWorkspace(remembered, persist: false);
+        } else {
+          selectedWorkspaceId = null;
+        }
+      }
     });
     unawaited(loadProviders());
   }
@@ -155,6 +184,7 @@ class SessionModel extends ChangeNotifier {
     // Persist the replacement atomically as one value, then enable normal requests.
     try {
       await store.write(saved);
+      _storedSession = saved;
     } catch (_) {
       auth.api.token = saved.token;
       try {
@@ -230,8 +260,9 @@ class SessionModel extends ChangeNotifier {
           'Workspace created. Could not read the refreshed workspace list.';
     }
   });
-  Future<void> selectWorkspace(Workspace value) async {
+  Future<void> selectWorkspace(Workspace value, {bool persist = true}) async {
     ++_generation;
+    _resetOverview();
     workspace = value;
     selectedWorkspaceId = value.id;
     page = null;
@@ -247,27 +278,114 @@ class SessionModel extends ChangeNotifier {
       _notify();
       return;
     }
-    await reload();
+    final selectedGeneration = _generation;
+    if (persist && _storedSession != null) {
+      final saved = _storedSession!;
+      _pendingWorkspaceWrites++;
+      final write = _workspaceWrite
+          .then((_) async {
+            if (auth.api.token != saved.token ||
+                selectedWorkspaceId != value.id) {
+              return;
+            }
+            final updated = StoredSession(
+              saved.token,
+              saved.expiresAt,
+              workspaceId: value.id,
+            );
+            await store.write(updated);
+            if (auth.api.token == saved.token) _storedSession = updated;
+          })
+          .whenComplete(() => _pendingWorkspaceWrites--);
+      _workspaceWrite = write.catchError((Object _) {});
+      try {
+        await write;
+      } catch (_) {
+        if (selectedGeneration == _generation) {
+          toast = 'Workspace opened, but could not remember it for next time. Please try switching again.';
+        }
+      }
+    }
+    if (selectedGeneration == _generation) await reload();
+  }
+
+  void _resetOverview() {
+    ++_overviewGeneration;
+    _overviewPage = null;
+    _overviewLoadedWeek = null;
+    overviewFailure = null;
+    loadingOverview = false;
+  }
+
+  Future<void> ensureOverview() async {
+    if (workspace != null && overviewData == null && !loadingOverview) {
+      await reloadOverview();
+    }
+  }
+
+  Future<void> reloadOverview() async {
+    final selected = workspace;
+    if (selected == null) return;
+    final start = overviewWeek;
+    final generation = ++_overviewGeneration;
+    loadingOverview = true;
+    overviewFailure = null;
+    _notify();
+    try {
+      final result = await hours.week(selected.id, start);
+      if (generation == _overviewGeneration) {
+        _overviewPage = result;
+        _overviewLoadedWeek = start;
+      }
+    } on ApiFailure catch (e) {
+      if (generation == _overviewGeneration) overviewFailure = e;
+    } catch (_) {
+      if (generation == _overviewGeneration) {
+        overviewFailure = const ApiFailure(
+          'invalid_response',
+          'Could not read the server’s hours response.',
+        );
+      }
+    } finally {
+      if (generation == _overviewGeneration) {
+        loadingOverview = false;
+        _notify();
+      }
+    }
   }
 
   Future<void> reload() async {
     final selected = workspace;
     if (selected == null) return;
     final generation = ++_generation;
+    final start = week;
     loadingWeek = true;
     failure = null;
     _notify();
     try {
-      final result = await hours.week(selected.id, week);
-      if (generation == _generation) page = result;
+      final result = await hours.week(selected.id, start);
+      if (generation == _generation) {
+        page = result;
+        if (start == overviewWeek) {
+          ++_overviewGeneration;
+          loadingOverview = false;
+          _overviewPage = result;
+          _overviewLoadedWeek = start;
+          overviewFailure = null;
+        }
+      }
     } on ApiFailure catch (e) {
-      if (generation == _generation) failure = e;
+      if (generation == _generation) {
+        failure = e;
+        if (start == overviewWeek) overviewFailure = e;
+      }
     } catch (_) {
       if (generation == _generation) {
         failure = const ApiFailure(
           'invalid_response',
           'Could not read the server’s hours response.',
         );
+        if (start == overviewWeek) overviewFailure = failure;
       }
     } finally {
       if (generation == _generation) {
@@ -291,6 +409,7 @@ class SessionModel extends ChangeNotifier {
 
   void switchWorkspace() {
     ++_generation;
+    _resetOverview();
     workspace = null;
     page = null;
     loadingWeek = false;
@@ -334,6 +453,8 @@ class SessionModel extends ChangeNotifier {
 
   Future<void> _clear(SessionPhase next) async {
     ++_generation;
+    _resetOverview();
+    _storedSession = null;
     sessionRevision++;
     _expiry?.cancel();
     auth.api.token = null;
@@ -347,6 +468,9 @@ class SessionModel extends ChangeNotifier {
     page = null;
     loadingWeek = false;
     phase = next;
+    if (_pendingWorkspaceWrites > 0) {
+      await _workspaceWrite;
+    }
     await store.clear();
   }
 
@@ -380,12 +504,14 @@ class SessionModel extends ChangeNotifier {
       );
     } else if (error.code == 'email_verification_required') {
       ++_generation;
+      _resetOverview();
       workspace = null;
       page = null;
       workspaces = [];
       phase = SessionPhase.verificationRequired;
     } else {
       ++_generation;
+      _resetOverview();
       workspace = null;
       page = null;
       workspaces = [];
