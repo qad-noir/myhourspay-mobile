@@ -306,6 +306,9 @@ String friendlyFailure(ApiFailure f) {
   if (f.code == 'credential_already_used') {
     return 'Start a new Google or Apple sign-in attempt.';
   }
+  if (f.code == 'google_signup_required') {
+    return 'To create a new account with Google, choose Create account, enter your name and accept the terms.';
+  }
   if (f.code == 'invalid_credentials') {
     return 'The email or password is incorrect.';
   }

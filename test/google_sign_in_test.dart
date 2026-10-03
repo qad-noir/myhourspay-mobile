@@ -36,6 +36,16 @@ void main() {
     expect(
       friendlyFailure(
         const ApiFailure(
+          'google_signup_required',
+          'Server message',
+          status: 422,
+        ),
+      ),
+      contains('choose Create account'),
+    );
+    expect(
+      friendlyFailure(
+        const ApiFailure(
           'account_link_required',
           'Server message',
           status: 409,
@@ -164,6 +174,32 @@ void main() {
       false,
     );
     expect(model.failure?.code, 'provider_unavailable');
+    model.dispose();
+  });
+  test('new Google account validation asks for signup consent instead of invisible fields', () async {
+    final model = createModel(
+      MockClient(
+        (r) async => response({
+          'message': 'The terms field is required.',
+          'code': 'validation_failed',
+          'errors': {
+            'terms': ['Required'],
+            'name': ['Required'],
+          },
+        }, 422),
+      ),
+      MemorySessionStore(),
+    );
+    model.providers = {'google': true};
+    expect(
+      await model.googleSignIn(
+        () async => 'fixture-token',
+        () async => 'Android',
+      ),
+      false,
+    );
+    expect(model.failure?.code, 'google_signup_required');
+    expect(friendlyFailure(model.failure!), contains('choose Create account'));
     model.dispose();
   });
   testWidgets(
