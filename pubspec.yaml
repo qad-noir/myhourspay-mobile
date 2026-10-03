@@ -1,7 +1,7 @@
 name: myhourspay
 description: "MyHoursPay companion app — native mobile companion."
 publish_to: 'none'
-version: 0.1.0+9
+version: 0.1.0+10
 
 environment:
   sdk: ^3.13.2

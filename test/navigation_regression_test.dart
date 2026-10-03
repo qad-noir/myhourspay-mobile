@@ -1,5 +1,7 @@
 import 'dart:async';
 
+import 'package:calendar_date_picker2/calendar_date_picker2.dart';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/testing.dart';
@@ -138,14 +140,76 @@ void main() {
       expect(find.text('Save hours'), findsOneWidget);
     },
   );
+
+  testWidgets(
+    'calendar opens today and unchanged OK preserves a historical week',
+    (tester) async {
+      var reads = 0;
+      final model = createModel(
+        MockClient((request) async {
+          reads++;
+          return response(hoursPage([]));
+        }),
+      );
+      final today = workspaceToday(model.workspace!.timezone);
+      model.week = weekStart(DateTime(today.year, today.month - 2, 1));
+      final previousWeek = model.week;
+      final previousPage = model.page;
+      addTearDown(model.dispose);
+      await tester.pumpWidget(
+        shell(
+          ListenableBuilder(
+            listenable: model,
+            builder: (_, _) => HoursScreen(model: model, initialTab: 1),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Choose a date'));
+      await tester.pumpAndSettle();
+      final picker = tester.widget<CalendarDatePicker2>(
+        find.byType(CalendarDatePicker2),
+      );
+      expect(picker.value, [today]);
+      final monthReads = reads;
+      await tester.tap(find.text('OK'));
+      await tester.pumpAndSettle();
+      expect(model.week, previousWeek);
+      expect(model.page, same(previousPage));
+      expect(reads, monthReads);
+    },
+  );
+  test('selecting a different date in the displayed week skips reload and notifications', () async {
+    var reads = 0, changes = 0;
+    final model = createModel(
+      MockClient((request) async {
+        reads++;
+        return response(hoursPage([]));
+      }),
+    );
+    addTearDown(model.dispose);
+    final page = model.page;
+    model.addListener(() => changes++);
+    await model.selectWeek(model.week.add(const Duration(days: 5)));
+    expect(reads, 0);
+    expect(changes, 0);
+    expect(model.page, same(page));
+    final next = model.week.add(const Duration(days: 7));
+    await model.selectWeek(next);
+    expect(reads, 1);
+    expect(model.week, next);
+  });
   testWidgets('calendar marks API dates and selection loads containing week', (
     tester,
   ) async {
     final requests = <String>[];
+    final today = workspaceToday('Europe/London');
+    final chosen = DateTime(today.year, today.month, today.day == 14 ? 15 : 14);
+    final chosenWeek = weekStart(chosen);
     final model = createModel(
       MockClient((r) async {
         requests.add(r.url.query);
-        return response(hoursPage([entry(id: 3, date: '2026-09-14')]));
+        return response(hoursPage([entry(id: 3, date: dateKey(chosen))]));
       }),
     );
     addTearDown(model.dispose);
@@ -164,17 +228,21 @@ void main() {
       find.byWidgetPredicate(
         (w) =>
             w is Semantics &&
-            w.properties.label == '2026-09-14, has an hours entry',
+            w.properties.label == '${dateKey(chosen)}, has an hours entry',
       ),
       findsOneWidget,
     );
-    await tester.tap(find.text('14'));
+    await tester.tap(find.text('${chosen.day}'));
     await tester.tap(find.text('OK'));
     await tester.pumpAndSettle();
-    expect(model.week, DateTime(2026, 9, 14));
+    expect(model.week, chosenWeek);
     expect(
       requests.any(
-        (q) => q.contains('start=2026-09-14') && q.contains('end=2026-09-20'),
+        (q) =>
+            q.contains('start=${dateKey(chosenWeek)}') &&
+            q.contains(
+              'end=${dateKey(chosenWeek.add(const Duration(days: 6)))}',
+            ),
       ),
       isTrue,
     );

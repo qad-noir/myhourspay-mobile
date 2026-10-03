@@ -513,7 +513,9 @@ class SessionModel extends ChangeNotifier {
   }
 
   Future<void> selectWeek(DateTime date) async {
-    week = weekStart(date);
+    final selected = weekStart(date);
+    if (selected == week) return;
+    week = selected;
     page = null;
     await reload();
   }

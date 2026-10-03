@@ -14,6 +14,7 @@ Future<DateTime?> selectHoursDate(
   SessionModel model,
 ) async {
   final workspace = model.workspace!;
+  final initialDate = workspaceToday(workspace.timezone);
   final revision = model.sessionRevision;
   final dates = ValueNotifier<Set<String>>({
     for (final entry in model.page?.entries ?? <HoursEntry>[])
@@ -59,13 +60,13 @@ Future<DateTime?> selectHoursDate(
     );
   }
 
-  requestMonth(model.week);
+  requestMonth(initialDate);
   try {
     final result = await showCalendarDatePicker2Dialog(
       context: context,
       useRootNavigator: false,
       dialogSize: const Size(360, 430),
-      value: [model.week],
+      value: [initialDate],
       dialogBackgroundColor: brandSurface,
       borderRadius: BorderRadius.circular(16),
       config: CalendarDatePicker2WithActionButtonsConfig(
@@ -138,7 +139,12 @@ Future<DateTime?> selectHoursDate(
         ],
       ),
     );
-    return revision == model.sessionRevision ? result?.firstOrNull : null;
+    final selected = result?.firstOrNull;
+    return revision == model.sessionRevision &&
+            selected != null &&
+            dateKey(selected) != dateKey(initialDate)
+        ? selected
+        : null;
   } finally {
     active = false;
     dates.dispose();
