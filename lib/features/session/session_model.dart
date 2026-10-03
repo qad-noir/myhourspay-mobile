@@ -157,6 +157,43 @@ class SessionModel extends ChangeNotifier {
       });
   Future<bool> register(Json input) =>
       perform(() async => _accept(await auth.register(input)));
+  Future<bool> googleSignIn(
+    Future<String> Function() acquireToken,
+    Future<String> Function() deviceLabel, {
+    String? name,
+    bool terms = false,
+  }) => perform(() async {
+    if (providers['google'] != true) {
+      throw const ApiFailure(
+        'provider_unavailable',
+        'Google sign-in is currently unavailable.',
+      );
+    }
+    final device = await deviceLabel();
+    final credential = await acquireToken();
+    try {
+      await _accept(
+        await auth.google(credential, device, name: name, terms: terms),
+      );
+    } on ApiFailure catch (error) {
+      if (error.code == 'account_link_required') {
+        throw const ApiFailure(
+          'account_link_required',
+          'This email already has an MHP account. Sign in with your password. Google linking requires the existing account to be authenticated.',
+          status: 409,
+        );
+      }
+      if (error.fields.containsKey('terms') ||
+          error.fields.containsKey('name')) {
+        throw const ApiFailure(
+          'google_signup_required',
+          'To create a new account with Google, choose Create account, enter your name and accept the terms.',
+          status: 422,
+        );
+      }
+      rethrow;
+    }
+  });
   Future<bool> completeMfa(String code, bool recovery) => perform(() async {
     if (_challenge == null || !_challengeExpiry!.isAfter(DateTime.now())) {
       await _clear(SessionPhase.expired);

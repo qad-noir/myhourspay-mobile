@@ -43,9 +43,11 @@ iOS. Neither iOS nor native keychain/keystore behaviour has been device-tested h
 ## Google / Apple
 
 GET /auth/providers is called without an MHP token. A false/unavailable provider
-never becomes a sign-in action. No provider button is currently enabled because
-SDK/device registration has not been completed, even if the backend later reports
-true. This is deliberate configuration gating, not simulated social login.
+never becomes a sign-in action. Android Google is wired when
+GOOGLE_SERVER_CLIENT_ID is supplied and the backend reports true. Build with
+config/production.json for the registered production APK. iOS Google still needs
+its own client ID and URL scheme; Apple integration remains pending. See
+docs/SOCIAL-SIGN-IN-SETUP.md.
 
 Needed for Google: registered Android package, debug/release signing fingerprints,
 iOS bundle/client configuration, correct web/server client ID and Laravel

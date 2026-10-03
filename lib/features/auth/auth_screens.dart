@@ -13,11 +13,13 @@ class LoginScreen extends StatefulWidget {
     super.key,
     required this.model,
     this.providerActions = const {},
+    this.signupProviderActions = const {},
     this.deviceLabelLoader = resolveDeviceName,
   });
   final SessionModel model;
   // Only configured integrations supply actions; fixtures inject isolated callbacks.
   final Map<String, VoidCallback> providerActions;
+  final Map<String, SignupProviderAction> signupProviderActions;
   final Future<String> Function() deviceLabelLoader;
   @override
   State<LoginScreen> createState() => _LoginScreenState();
@@ -53,6 +55,7 @@ class _LoginScreenState extends State<LoginScreen> {
     if (signup) {
       return SignupScreen(
         model: model,
+        providerActions: widget.signupProviderActions,
         deviceLabelLoader: widget.deviceLabelLoader,
         onSignIn: () => setState(() {
           model.failure = null;

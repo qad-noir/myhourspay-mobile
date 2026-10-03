@@ -1,5 +1,19 @@
 # Configure Google and Apple mobile sign-in
 
+## Android Google integration (build 5)
+
+The native Google SDK adapter is now wired into both login and signup. Build using `flutter build apk --release --dart-define-from-file=config/production.json`. This public configuration file includes the production API and the supplied Web OAuth client ID. No client secret is included or needed in Flutter. Builds without `GOOGLE_SERVER_CLIENT_ID` hide Google.
+
+Current Android OAuth client: `69237986520-u5q4fqgij9dr4ijm2bfdcq7t6buq60qd.apps.googleusercontent.com`. Register package `com.example.myhourspay` and signing SHA-1 `F6:D1:F8:E5:ED:CA:A7:75:EC:54:A7:61:8E:E9:27:99:7E:AC:ED:10`. The SDK takes the **Web** client as serverClientId; the Android client ID is provider-console registration, not the Dart serverClientId.
+
+Web/backend audience: `69237986520-s7mltqvpk5aqt3l2pljgemcmr8vtnvb1.apps.googleusercontent.com`. Set that exact value in production `MOBILE_GOOGLE_AUDIENCES`. Register debug package `com.example.myhourspay.dev` separately if testing debug builds. Register final store package and release/Play signing separately before launch.
+
+The adapter performs explicit native authentication and a fresh single-use ID-token exchange. It requests no Calendar/Contacts access, stores no provider token, and routes the MHP response through existing MFA/email-verification/secure-session handling. Cancellation and provider configuration failures release the busy state. Existing matching MHP emails require authenticated linking; the mobile account-link UI is still pending and identities are never silently merged.
+
+The current SocialInput contract and Laravel social controller do not support marketing_consent. Signup shows this limitation: the checked promotional preference applies to password registration only. A backend contract/controller update is required before social registration can persist promotional consent.
+
+iOS uses the same native adapter only when `GOOGLE_IOS_CLIENT_ID` is supplied. Create its own OAuth client matching the bundle ID, then add its reversed client ID under `CFBundleURLTypes` in ios/Runner/Info.plist. No fake iOS IDs/URL schemes were inserted. iOS build/device testing remains pending macOS/Xcode access. Flutter web Google buttons remain hidden: web requires registered origins and Google's SDK-rendered button; native authenticate cannot be used on web.
+
 ## Laravel configuration
 
 Edit the deployed Laravel `.env` (not the Flutter project `.env`):
@@ -38,6 +52,6 @@ Official setup: [Apple environment configuration](https://developer.apple.com/do
 
 ## What makes buttons appear in this Flutter build
 
-The app fetches `/auth/providers`. A button appears only when its backend flag is true **and a real platform adapter is supplied**. This is intentional: the native SDKs, developer IDs and Apple Android callback/handoff are still unconfigured. There are no existing social-sign-in Dart flags that finish that setup. Provide the real client IDs, app identities, signing certificates and callback details before implementing/wiring those adapters. Do not enable buttons that cannot actually complete sign-in.
+The app fetches `/auth/providers`. A button appears only when its backend flag is true **and a real platform adapter is configured**. Android Google is configured in build 5 using the public production configuration above. iOS Google needs its client and URL scheme; Apple adapters and Android callback/handoff remain unconfigured.
 
 The test-only sign-up preview enables both buttons with isolated callbacks for visual review. It does not perform or pretend to succeed at provider authentication, and is not reachable from release routing. See docs/api/mobile-integration.md for exchange, nonce, linking and remaining store-release requirements.

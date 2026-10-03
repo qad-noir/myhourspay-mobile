@@ -6,7 +6,7 @@ import '../../shared/widgets.dart';
 import '../session/session_model.dart';
 
 /// Configured provider adapters receive the explicit new-account consent/name.
-/// No provider adapter is installed in release until SDK IDs/nonce setup exists.
+/// Only configured platform integrations supply these callbacks.
 typedef SignupProviderAction = Future<void> Function(
   String name,
   bool terms,
@@ -458,6 +458,14 @@ class _SignupScreenState extends State<SignupScreen> {
                     ],
                   ),
                   const SizedBox(height: 18),
+                  if (enabledProviders.contains('google'))
+                    const Padding(
+                      padding: EdgeInsets.only(bottom: 12),
+                      child: Text(
+                        'Promotional consent above applies to email/password registration only. Google registration does not save that preference yet.',
+                        style: TextStyle(color: brandMuted, fontSize: 12),
+                      ),
+                    ),
                   for (final provider in enabledProviders)
                     Padding(
                       padding: const EdgeInsets.only(bottom: 12),

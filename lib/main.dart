@@ -8,6 +8,7 @@ import 'core/api_environment.dart';
 import 'core/secure_session_store.dart';
 import 'features/auth/auth_repository.dart';
 import 'features/auth/auth_screens.dart';
+import 'features/auth/google_identity.dart';
 import 'features/hours/hours_screen.dart';
 import 'features/hours/repository.dart';
 import 'features/session/session_model.dart';
@@ -25,6 +26,12 @@ void main() {
     final api = ApiClient(config);
     runApp(
       MhpApp(
+        googleIdentity: NativeGoogleIdentity(
+          serverClientId: const String.fromEnvironment(
+            'GOOGLE_SERVER_CLIENT_ID',
+          ),
+          iosClientId: const String.fromEnvironment('GOOGLE_IOS_CLIENT_ID'),
+        ),
         model: SessionModel(
           AuthRepository(api),
           HoursRepository(api),
@@ -59,9 +66,11 @@ class MhpApp extends StatefulWidget {
     super.key,
     required this.model,
     this.deviceLabelLoader = resolveDeviceName,
+    this.googleIdentity,
   });
   final SessionModel model;
   final Future<String> Function() deviceLabelLoader;
+  final GoogleIdentity? googleIdentity;
   @override
   State<MhpApp> createState() => _MhpAppState();
 }
@@ -124,6 +133,24 @@ class _MhpAppState extends State<MhpApp> {
         SessionPhase.signedOut || SessionPhase.expired => LoginScreen(
           model: model,
           deviceLabelLoader: widget.deviceLabelLoader,
+          providerActions: {
+            if (widget.googleIdentity?.configured == true)
+              'google': () => model.googleSignIn(
+                widget.googleIdentity!.acquireIdToken,
+                widget.deviceLabelLoader,
+              ),
+          },
+          signupProviderActions: {
+            if (widget.googleIdentity?.configured == true)
+              'google': (name, terms, marketing) async {
+                await model.googleSignIn(
+                  widget.googleIdentity!.acquireIdToken,
+                  widget.deviceLabelLoader,
+                  name: name,
+                  terms: terms,
+                );
+              },
+          },
         ),
         SessionPhase.twoFactorChallenge => ChallengeScreen(
           model: model,

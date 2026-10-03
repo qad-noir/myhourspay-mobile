@@ -86,6 +86,24 @@ class AuthRepository {
       body: data,
     ),
   );
+  Future<AuthResult> google(
+    String idToken,
+    String deviceName, {
+    String? name,
+    bool terms = false,
+  }) async => AuthResult.fromJson(
+    await api.request(
+      'POST',
+      '/auth/google',
+      authenticated: false,
+      body: {
+        'id_token': idToken,
+        'device_name': deviceName,
+        'name': ?name,
+        if (terms) 'terms': true,
+      },
+    ),
+  );
   Future<AuthResult> mfa(
     String challenge,
     String value, {

@@ -1,0 +1,5 @@
+{
+  "APP_ENV": "production",
+  "API_BASE_URL": "https://mhp.glsltd.co.uk/api/v1/mobile",
+  "GOOGLE_SERVER_CLIENT_ID": "69237986520-s7mltqvpk5aqt3l2pljgemcmr8vtnvb1.apps.googleusercontent.com"
+}
