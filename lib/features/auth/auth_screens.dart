@@ -1,97 +1,65 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 import 'package:flutter/material.dart';
 
 import '../../shared/widgets.dart';
 import '../../core/api_client.dart';
 import '../session/session_model.dart';
-
-String get deviceName {
-  if (kIsWeb) return 'MHP Web';
-  return switch (defaultTargetPlatform) {
-    TargetPlatform.android => 'MHP Android',
-    TargetPlatform.iOS => 'MHP iPhone',
-    final platform => 'MHP ${platform.name}',
-  };
-}
+import '../../core/device_name.dart';
+import 'signup_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({
     super.key,
     required this.model,
     this.providerActions = const {},
+    this.deviceLabelLoader = resolveDeviceName,
   });
   final SessionModel model;
   // Only configured integrations supply actions; fixtures inject isolated callbacks.
   final Map<String, VoidCallback> providerActions;
+  final Future<String> Function() deviceLabelLoader;
   @override
   State<LoginScreen> createState() => _LoginScreenState();
 }
 
 class _LoginScreenState extends State<LoginScreen> {
   final form = GlobalKey<FormState>();
-  final email = TextEditingController(),
-      password = TextEditingController(),
-      name = TextEditingController(),
-      confirmation = TextEditingController();
-  bool register = false, hidden = true, terms = false, marketing = false;
+  final email = TextEditingController(), password = TextEditingController();
+  bool signup = false, hidden = true, preparing = false;
   @override
   void dispose() {
     email.dispose();
     password.dispose();
-    name.dispose();
-    confirmation.dispose();
     super.dispose();
   }
 
-  Future<void> openLegal(String path) async {
-    final url = widget.model.auth.api.environment.base.replace(
-      path: path,
-      query: null,
-      fragment: null,
-    );
-    try {
-      if (!await launchUrl(url, mode: LaunchMode.externalApplication)) {
-        throw StateError('Unavailable');
-      }
-    } catch (_) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text(
-              'Could not open the legal page. Please read it on the MHP website.',
-            ),
-          ),
-        );
-      }
-    }
-  }
-
   Future<void> submit() async {
-    if (!form.currentState!.validate()) return;
-    FocusScope.of(context).unfocus();
-    if (register) {
-      await widget.model.register({
-        'name': name.text.trim(),
-        'email': email.text.trim(),
-        'password': password.text,
-        'password_confirmation': confirmation.text,
-        'device_name': deviceName,
-        'terms': terms,
-        'marketing_consent': marketing,
-      });
-    } else {
-      await widget.model.login(email.text.trim(), password.text, deviceName);
+    if (preparing || widget.model.busy || !form.currentState!.validate()) {
+      return;
     }
+    FocusScope.of(context).unfocus();
+    setState(() => preparing = true);
+    final label = await widget.deviceLabelLoader();
+    if (!mounted) return;
+    await widget.model.login(email.text.trim(), password.text, label);
     password.clear();
-    confirmation.clear();
+    if (mounted) setState(() => preparing = false);
   }
 
   @override
   Widget build(BuildContext context) {
     final model = widget.model;
+    if (signup) {
+      return SignupScreen(
+        model: model,
+        deviceLabelLoader: widget.deviceLabelLoader,
+        onSignIn: () => setState(() {
+          model.failure = null;
+          signup = false;
+        }),
+      );
+    }
     return Scaffold(
       body: Form(
         key: form,
@@ -100,21 +68,19 @@ class _LoginScreenState extends State<LoginScreen> {
             alignment: WrapAlignment.center,
             crossAxisAlignment: WrapCrossAlignment.center,
             children: [
-              Text(
-                register
-                    ? 'Already have an account?'
-                    : 'Don’t have an account?',
-                style: const TextStyle(color: brandMuted, fontSize: 14),
+              const Text(
+                'Don’t have an account?',
+                style: TextStyle(color: brandMuted, fontSize: 14),
               ),
               TextButton(
-                onPressed: model.busy
+                onPressed: model.busy || preparing
                     ? null
                     : () => setState(() {
-                        register = !register;
                         password.clear();
-                        confirmation.clear();
+                        model.failure = null;
+                        signup = true;
                       }),
-                child: Text(register ? 'Sign in' : 'Create account'),
+                child: const Text('Create account'),
               ),
             ],
           ),
@@ -136,31 +102,13 @@ class _LoginScreenState extends State<LoginScreen> {
             ),
             const SizedBox(height: 30),
             Text(
-              register ? 'Create your account' : 'Your time. In order.',
+              'Your time. In order.',
               textAlign: TextAlign.center,
               style: Theme.of(context).textTheme.headlineLarge,
             ),
             const SizedBox(height: 8),
-            Text(
-              register
-                  ? 'Track your time across your MHP workspaces.'
-                  : 'Welcome back.',
-              textAlign: TextAlign.center,
-            ),
+            const Text('Welcome back.', textAlign: TextAlign.center),
             const SizedBox(height: 28),
-            if (register) ...[
-              TextFormField(
-                controller: name,
-                enabled: !model.busy,
-                autofillHints: const [AutofillHints.name],
-                decoration: InputDecoration(
-                  labelText: 'Full name',
-                  errorText: model.failure?.fields['name']?.firstOrNull,
-                ),
-                validator: (v) => v!.trim().isEmpty ? 'Enter your name.' : null,
-              ),
-              const SizedBox(height: 16),
-            ],
             TextFormField(
               controller: email,
               enabled: !model.busy,
@@ -183,9 +131,7 @@ class _LoginScreenState extends State<LoginScreen> {
               obscureText: hidden,
               enableSuggestions: false,
               autocorrect: false,
-              autofillHints: [
-                register ? AutofillHints.newPassword : AutofillHints.password,
-              ],
+              autofillHints: [AutofillHints.password],
               decoration: InputDecoration(
                 labelText: 'Password',
                 prefixIcon: const Icon(Icons.lock_outline),
@@ -202,54 +148,6 @@ class _LoginScreenState extends State<LoginScreen> {
               ),
               validator: (v) => v!.isEmpty ? 'Enter your password.' : null,
             ),
-            if (register) ...[
-              const SizedBox(height: 16),
-              TextFormField(
-                controller: confirmation,
-                enabled: !model.busy,
-                obscureText: true,
-                enableSuggestions: false,
-                autocorrect: false,
-                decoration: const InputDecoration(
-                  labelText: 'Confirm password',
-                ),
-                validator: (v) =>
-                    v != password.text ? 'Passwords must match.' : null,
-              ),
-              const SizedBox(height: 12),
-              CheckboxListTile(
-                contentPadding: EdgeInsets.zero,
-                title: const Text('I accept the MHP terms and privacy policy.'),
-                value: terms,
-                onChanged: model.busy
-                    ? null
-                    : (v) => setState(() => terms = v!),
-              ),
-              const Text(
-                'Read the terms and privacy policy before creating your account.',
-              ),
-              Wrap(
-                spacing: 12,
-                children: [
-                  TextButton(
-                    onPressed: () => openLegal('/terms'),
-                    child: const Text('Terms of service'),
-                  ),
-                  TextButton(
-                    onPressed: () => openLegal('/policy'),
-                    child: const Text('Privacy policy'),
-                  ),
-                ],
-              ),
-              CheckboxListTile(
-                contentPadding: EdgeInsets.zero,
-                title: const Text('Send me optional product news'),
-                value: marketing,
-                onChanged: model.busy
-                    ? null
-                    : (v) => setState(() => marketing = v!),
-              ),
-            ],
             if (model.phase != SessionPhase.expired) ErrorNotice(model.failure),
             Notice(
               model.phase == SessionPhase.expired
@@ -258,32 +156,24 @@ class _LoginScreenState extends State<LoginScreen> {
             ),
             const SizedBox(height: 12),
             FilledButton(
-              onPressed: model.busy || (register && !terms) ? null : submit,
-              child: Text(
-                model.busy
-                    ? 'Please wait…'
-                    : register
-                    ? 'Create account'
-                    : 'Sign in',
-              ),
+              onPressed: model.busy || preparing ? null : submit,
+              child: Text(model.busy || preparing ? 'Signing in…' : 'Sign in'),
             ),
-            if (!register)
-              TextButton(
-                onPressed: model.busy
-                    ? null
-                    : () => showDialog<void>(
-                        context: context,
-                        builder: (_) => ForgotPasswordDialog(
-                          model: model,
-                          initialEmail: email.text,
-                        ),
+            TextButton(
+              onPressed: model.busy || preparing
+                  ? null
+                  : () => showDialog<void>(
+                      context: context,
+                      builder: (_) => ForgotPasswordDialog(
+                        model: model,
+                        initialEmail: email.text,
                       ),
-                child: const Text('Forgot password?'),
-              ),
-            if (!register &&
-                widget.providerActions.keys.any(
-                  (p) => model.providers[p] == true,
-                )) ...[
+                    ),
+              child: const Text('Forgot password?'),
+            ),
+            if (widget.providerActions.keys.any(
+              (p) => model.providers[p] == true,
+            )) ...[
               const SizedBox(height: 18),
               const Row(
                 children: [
@@ -329,8 +219,6 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
                   ),
             ],
-            // Provider SDKs/IDs are not configured. No action is exposed merely because
-            // the server can verify a credential. Availability is fetched by SessionModel.
           ],
         ),
       ),
@@ -400,7 +288,13 @@ class _ChallengeScreenState extends State<ChallengeScreen> {
                       }
                       code.clear();
                     },
-              child: Text(model.busy ? 'Verifying…' : 'Verify and continue'),
+              child: Text(
+                model.busy
+                    ? 'Verifying…'
+                    : widget.emailVerification
+                    ? 'Verify email'
+                    : 'Verify and continue',
+              ),
             ),
             const SizedBox(height: 8),
             widget.emailVerification

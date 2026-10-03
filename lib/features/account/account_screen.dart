@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../core/api_client.dart';
+import '../../core/device_name.dart';
 import '../../shared/widgets.dart';
 import '../auth/auth_repository.dart';
 import '../session/session_model.dart';
@@ -58,7 +59,9 @@ class _AccountScreenState extends State<AccountScreen> {
       context: context,
       builder: (dialogContext) => AlertDialog(
         title: const Text('Revoke this device?'),
-        content: Text('${session.name} will need to sign in again.'),
+        content: Text(
+          '${displayDeviceName(session.name)} will need to sign in again.',
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(dialogContext, false),
@@ -197,7 +200,7 @@ class _AccountScreenState extends State<AccountScreen> {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
-                                  sessions[i].name,
+                                  displayDeviceName(sessions[i].name),
                                   style: const TextStyle(
                                     fontWeight: FontWeight.w600,
                                   ),

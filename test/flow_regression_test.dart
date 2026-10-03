@@ -121,7 +121,9 @@ void main() {
         'test-token',
         DateTime.now().add(const Duration(days: 1)),
       );
-      await tester.pumpWidget(MhpApp(model: model));
+      await tester.pumpWidget(
+        MhpApp(deviceLabelLoader: () async => 'Test device', model: model),
+      );
       await tester.pumpAndSettle();
       await tester.ensureVisible(find.text('Create workspace'));
       await tester.tap(find.text('Create workspace'));

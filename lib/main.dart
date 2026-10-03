@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:timezone/data/latest.dart' as tz;
 
 import 'core/api_client.dart';
+import 'core/device_name.dart';
 import 'core/api_environment.dart';
 import 'core/secure_session_store.dart';
 import 'features/auth/auth_repository.dart';
@@ -54,8 +55,13 @@ void main() {
 }
 
 class MhpApp extends StatefulWidget {
-  const MhpApp({super.key, required this.model});
+  const MhpApp({
+    super.key,
+    required this.model,
+    this.deviceLabelLoader = resolveDeviceName,
+  });
   final SessionModel model;
+  final Future<String> Function() deviceLabelLoader;
   @override
   State<MhpApp> createState() => _MhpAppState();
 }
@@ -115,8 +121,10 @@ class _MhpAppState extends State<MhpApp> {
   );
   Widget home(BuildContext context, SessionModel model) =>
       switch (model.phase) {
-        SessionPhase.signedOut ||
-        SessionPhase.expired => LoginScreen(model: model),
+        SessionPhase.signedOut || SessionPhase.expired => LoginScreen(
+          model: model,
+          deviceLabelLoader: widget.deviceLabelLoader,
+        ),
         SessionPhase.twoFactorChallenge => ChallengeScreen(
           model: model,
           emailVerification: false,

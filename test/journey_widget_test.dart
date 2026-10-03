@@ -111,7 +111,10 @@ void main() {
       await tester.pumpWidget(
         RepaintBoundary(
           key: captureKey,
-          child: MhpApp(model: model),
+          child: MhpApp(
+            deviceLabelLoader: () async => 'Test device',
+            model: model,
+          ),
         ),
       );
       await tester.pumpAndSettle();
@@ -205,6 +208,7 @@ void main() {
       );
       await tester.pumpWidget(
         MhpApp(
+          deviceLabelLoader: () async => 'Test device',
           model: SessionModel(
             AuthRepository(api),
             HoursRepository(api),
