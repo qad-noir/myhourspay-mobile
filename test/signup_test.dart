@@ -65,6 +65,7 @@ Future<void> fill(WidgetTester tester, {String pass = 'TestOnly123'}) async {
 
 Future<void> consent(WidgetTester tester) async {
   await tester.ensureVisible(find.byType(Checkbox).first);
+  await tester.pumpAndSettle();
   await tester.tap(find.byType(Checkbox).first);
   await tester.pump();
 }
@@ -78,6 +79,70 @@ Future<void> create(WidgetTester tester) async {
 }
 
 void main() {
+  testWidgets(
+    'Google checks name and terms, clears stale password errors and needs no email/password',
+    (tester) async {
+      var attempts = 0;
+      final model = makeSignupModel(
+        MockClient(
+          (r) async => throw StateError('No password API call expected'),
+        ),
+      );
+      model.providers = {'google': true};
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: mhpTheme(),
+          builder: phoneShell,
+          home: SignupScreen(
+            model: model,
+            onSignIn: () {},
+            providerActions: {
+              'google': (name, terms, marketing) async {
+                attempts++;
+                expect(name, 'Google User');
+                expect(terms, true);
+              },
+            },
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      await create(tester);
+      expect(find.text('Enter a valid email address.'), findsOneWidget);
+      await tester.ensureVisible(
+        find.widgetWithText(OutlinedButton, 'Continue with Google'),
+      );
+      await tester.tap(
+        find.widgetWithText(OutlinedButton, 'Continue with Google'),
+      );
+      await tester.pumpAndSettle();
+      expect(attempts, 0);
+      expect(find.text('Enter a valid email address.'), findsNothing);
+      expect(
+        find.text(
+          'Use at least 8 characters, upper- and lowercase letters, and a number.',
+        ),
+        findsNothing,
+      );
+      await tester.enterText(
+        find.byKey(const ValueKey('signup-name')),
+        'Google User',
+      );
+      await tester.pumpAndSettle();
+      await consent(tester);
+      await tester.ensureVisible(
+        find.widgetWithText(OutlinedButton, 'Continue with Google'),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(
+        find.widgetWithText(OutlinedButton, 'Continue with Google'),
+      );
+      await tester.pumpAndSettle();
+      expect(attempts, 1);
+      await tester.pumpWidget(const SizedBox());
+      model.dispose();
+    },
+  );
   setUpAll(() async {
     tz.initializeTimeZones();
     for (final item in {

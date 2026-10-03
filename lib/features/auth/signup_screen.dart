@@ -42,6 +42,7 @@ class _SignupScreenState extends State<SignupScreen> {
       submitting = false,
       showTermsError = false;
   String? socialNameError;
+  bool socialValidation = false;
   final clearedErrors = <String>{};
   SessionModel get model => widget.model;
   bool get pending => submitting || model.busy;
@@ -94,6 +95,7 @@ class _SignupScreenState extends State<SignupScreen> {
 
   Future<void> submit() async {
     if (pending) return;
+    socialValidation = false;
     final valid = form.currentState!.validate();
     setState(() => showTermsError = !terms);
     if (!valid || !terms) return;
@@ -123,11 +125,15 @@ class _SignupScreenState extends State<SignupScreen> {
   Future<void> social(String provider) async {
     if (pending) return;
     setState(() {
+      socialValidation = true;
+      model.failure = null;
+      clearedErrors.clear();
       showTermsError = !terms;
       socialNameError = name.text.trim().isEmpty
           ? 'Enter your full name.'
           : null;
     });
+    form.currentState!.validate();
     if (!terms || socialNameError != null) return;
     FocusScope.of(context).unfocus();
     setState(() => submitting = true);
@@ -207,7 +213,8 @@ class _SignupScreenState extends State<SignupScreen> {
                 )
               : null,
         ),
-        validator: validator,
+        validator: (value) =>
+            socialValidation && keyName != 'name' ? null : validator(value),
         onChanged: (_) {
           if (keyName == 'name') socialNameError = null;
           changed(keyName);
@@ -462,7 +469,7 @@ class _SignupScreenState extends State<SignupScreen> {
                     const Padding(
                       padding: EdgeInsets.only(bottom: 12),
                       child: Text(
-                          'Promotional consent above applies to email/password registration only. Google registration does not save that preference.',
+                        'Google sign-up needs your name and terms acceptance. Google supplies your email; no password is needed.\n\nPromotional consent above applies to email/password registration only. Google registration does not save that preference.',
                         style: TextStyle(color: brandMuted, fontSize: 12),
                       ),
                     ),

@@ -32,6 +32,30 @@ SessionModel createModel(MockClient client, MemorySessionStore store) {
 }
 
 void main() {
+  test('provider rejection never asks for invisible highlighted fields', () {
+    expect(
+      friendlyFailure(
+        const ApiFailure(
+          'invalid_provider_credential',
+          'Rejected',
+          status: 422,
+        ),
+      ),
+      contains('sign-in credential'),
+    );
+    expect(
+      friendlyFailure(
+        const ApiFailure('provider_email_required', 'Rejected', status: 422),
+      ),
+      contains('share an email'),
+    );
+    expect(
+      friendlyFailure(
+        const ApiFailure('validation_failed', 'Rejected', status: 422),
+      ),
+      isNot(contains('highlighted')),
+    );
+  });
   test('provider conflicts show account linking or fresh sign-in guidance', () {
     expect(
       friendlyFailure(

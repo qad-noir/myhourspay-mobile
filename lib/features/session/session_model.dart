@@ -87,6 +87,11 @@ class SessionModel extends ChangeNotifier {
       await action();
       return true;
     } on ApiFailure catch (e) {
+      // Only bounded protocol codes/statuses; never log messages, bodies or tokens.
+      final safeCode = RegExp(r'^[a-z_]{1,64}$').hasMatch(e.code)
+          ? e.code
+          : 'unknown';
+      debugPrint('MHP action rejected: HTTP ${e.status}; code=$safeCode');
       if (phase != SessionPhase.expired) failure = e;
       return false;
     } on FormatException {
@@ -176,6 +181,12 @@ class SessionModel extends ChangeNotifier {
         await auth.google(credential, device, name: name, terms: terms),
       );
     } on ApiFailure catch (error) {
+      final safeCode = RegExp(r'^[a-z_]{1,64}$').hasMatch(error.code)
+          ? error.code
+          : 'unknown';
+      debugPrint(
+        'MHP Google exchange rejected: HTTP ${error.status}; code=$safeCode',
+      );
       if (error.code == 'account_link_required') {
         throw const ApiFailure(
           'account_link_required',
@@ -188,6 +199,17 @@ class SessionModel extends ChangeNotifier {
         throw const ApiFailure(
           'google_signup_required',
           'To create a new account with Google, choose Create account, enter your name and accept the terms.',
+          status: 422,
+        );
+      }
+      if (error.status == 422 &&
+          ![
+            'invalid_provider_credential',
+            'provider_email_required',
+          ].contains(error.code)) {
+        throw const ApiFailure(
+          'google_exchange_rejected',
+          'Google sign-in was rejected by MHP. Please start a new attempt. If it continues, contact support to check the server validation.',
           status: 422,
         );
       }

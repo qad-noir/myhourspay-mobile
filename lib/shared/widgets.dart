@@ -309,6 +309,15 @@ String friendlyFailure(ApiFailure f) {
   if (f.code == 'google_signup_required') {
     return 'To create a new account with Google, choose Create account, enter your name and accept the terms.';
   }
+  if (f.code == 'invalid_provider_credential') {
+    return 'Google or Apple rejected the sign-in credential. Start a new sign-in attempt. If it continues, contact support to check the provider configuration.';
+  }
+  if (f.code == 'provider_email_required') {
+    return 'Your sign-in provider must share an email address to continue.';
+  }
+  if (f.code == 'google_exchange_rejected') {
+    return f.message;
+  }
   if (f.code == 'invalid_credentials') {
     return 'The email or password is incorrect.';
   }
@@ -333,7 +342,11 @@ String friendlyFailure(ApiFailure f) {
   if (f.status == 409) {
     return 'This record has changed or is locked. Reload the server version before continuing.';
   }
-  if (f.status == 422) return 'Check the highlighted details and try again.';
+  if (f.status == 422) {
+    return f.fields.isEmpty
+        ? 'The server rejected this action. Please try again. If it continues, contact support.'
+        : 'Check the highlighted details and try again.';
+  }
   return f.status == 0
       ? f.message
       : 'This action could not be completed. Please try again.';
