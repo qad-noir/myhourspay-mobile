@@ -81,7 +81,14 @@ class _TimesheetScreenState extends State<TimesheetScreen> {
         mutation,
       );
       if (mounted) {
-        setState(() => notice = 'Timesheet submitted.');
+        ScaffoldMessenger.of(context).hideCurrentSnackBar();
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Timesheet submitted.'),
+            duration: Duration(seconds: 4),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
         await load();
       }
     } on ApiFailure catch (e) {

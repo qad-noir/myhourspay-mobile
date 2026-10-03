@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "MyHoursPay Native Mobile API",
-    "version": "1.0.0",
+    "version": "2.0.0",
     "description": "Implemented native routes, replacing the 0.1.0 source-inspection draft. Production URL is the deployment target, not evidence of deployment. No paid external api_access requirement. Existing feature entitlements and workspace permissions apply. See mobile-integration.md for platform setup and release limitations."
   },
   "servers": [
@@ -45,17 +45,132 @@
                         },
                         "apple": {
                           "type": "boolean"
+                        },
+                        "google_challenge_required": {
+                          "const": true
                         }
                       },
                       "required": [
                         "google",
-                        "apple"
+                        "apple",
+                        "google_challenge_required"
                       ]
                     }
                   },
                   "required": [
                     "data"
                   ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthenticated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Account, verification, feature or role restriction",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Resource not found or inaccessible",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Invalid input or credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limited",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds until retry, when supplied by the throttle",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Provider or service unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "security": []
+      }
+    },
+    "/auth/google/challenge": {
+      "post": {
+        "operationId": "createGoogleChallenge",
+        "summary": "Start nonce-bound Google authentication",
+        "description": "No body or bearer required. Throttled to 10/minute per IP. Cryptographically random nonce expires in five minutes. Pass nonce UNCHANGED to the per-attempt native Google adapter; do not hash it. Exchange the resulting signed ID token plus challenge_id. Also used for explicit linking. Responses are private/no-store; never log nonce or token.",
+        "tags": [
+          "Authentication"
+        ],
+        "responses": {
+          "201": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GoogleChallenge"
                 }
               }
             }
@@ -280,7 +395,7 @@
       "post": {
         "operationId": "exchangeProviderCredential",
         "summary": "Exchange Google or Apple identity",
-        "description": "",
+        "description": "Google requires a fresh per-attempt challenge and a signed RAW nonce match. iat within five minutes and all signature/issuer/audience/expiry/replay checks remain mandatory. A successful exchange consumes challenge and credential atomically, including when MFA or email verification is next. New accounts require name and terms=true. Older apps without nonce support must upgrade.",
         "tags": [
           "Authentication"
         ],
@@ -326,7 +441,7 @@
             }
           },
           "409": {
-            "description": "Conflict",
+            "description": "google_challenge_used; credential_already_used (exchange); account_link_required; account_link_conflict (link). Start a new challenge/native attempt; never replay credentials.",
             "content": {
               "application/json": {
                 "schema": {
@@ -336,7 +451,7 @@
             }
           },
           "422": {
-            "description": "Invalid input or credentials",
+            "description": "validation_failed (missing/malformed challenge_id or other fields); invalid_provider_credential (signature/issuer/audience/expiry/freshness); google_challenge_invalid; google_challenge_expired; google_nonce_mismatch; invalid_nonce (Apple); invalid_credentials (link password); provider_email_required.",
             "content": {
               "application/json": {
                 "schema": {
@@ -415,7 +530,7 @@
       "post": {
         "operationId": "linkProvider",
         "summary": "Link identity to authenticated account",
-        "description": "Requires verified mobile token and current MHP password. Apple requires nonce from /auth/nonce. Never merges accounts by email. Set a password via recovery if originally registered socially.",
+        "description": "Requires verified mobile token and current MHP password. Google requires challenge_id and signed raw nonce from /auth/google/challenge. Apple requires nonce from /auth/nonce. Never merges accounts by email. Set a password via recovery if originally registered socially.",
         "tags": [
           "Authentication"
         ],
@@ -461,7 +576,7 @@
             }
           },
           "409": {
-            "description": "Conflict",
+            "description": "google_challenge_used; credential_already_used (exchange); account_link_required; account_link_conflict (link). Start a new challenge/native attempt; never replay credentials.",
             "content": {
               "application/json": {
                 "schema": {
@@ -471,7 +586,7 @@
             }
           },
           "422": {
-            "description": "Invalid input or credentials",
+            "description": "validation_failed (missing/malformed challenge_id or other fields); invalid_provider_credential (signature/issuer/audience/expiry/freshness); google_challenge_invalid; google_challenge_expired; google_nonce_mismatch; invalid_nonce (Apple); invalid_credentials (link password); provider_email_required.",
             "content": {
               "application/json": {
                 "schema": {
@@ -3636,6 +3751,85 @@
         ]
       },
       "SocialInput": {
+        "oneOf": [
+          {
+            "$ref": "#/components/schemas/GoogleSocialInput"
+          },
+          {
+            "$ref": "#/components/schemas/AppleSocialInput"
+          }
+        ],
+        "description": "Use the Google schema for provider=google and Apple schema for provider=apple. Google challenge_id is mandatory; no legacy token-only fallback."
+      },
+      "SocialLinkInput": {
+        "oneOf": [
+          {
+            "$ref": "#/components/schemas/GoogleLinkInput"
+          },
+          {
+            "$ref": "#/components/schemas/AppleLinkInput"
+          }
+        ],
+        "description": "Use the Google schema for provider=google and Apple schema for provider=apple. Google challenge_id is mandatory; no legacy token-only fallback."
+      },
+      "GoogleChallenge": {
+        "type": "object",
+        "properties": {
+          "challenge_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "nonce": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{64}$"
+          },
+          "nonce_mode": {
+            "const": "raw"
+          },
+          "expires_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "challenge_id",
+          "nonce",
+          "nonce_mode",
+          "expires_at"
+        ]
+      },
+      "GoogleSocialInput": {
+        "type": "object",
+        "properties": {
+          "id_token": {
+            "type": "string",
+            "maxLength": 16000,
+            "writeOnly": true
+          },
+          "device_name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100
+          },
+          "name": {
+            "type": "string",
+            "maxLength": 255
+          },
+          "terms": {
+            "const": true
+          },
+          "challenge_id": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        "required": [
+          "id_token",
+          "device_name",
+          "challenge_id"
+        ]
+      },
+      "AppleSocialInput": {
         "type": "object",
         "properties": {
           "id_token": {
@@ -3663,11 +3857,35 @@
         },
         "required": [
           "id_token",
-          "device_name"
-        ],
-        "description": "Apple requires nonce. New accounts require name and terms=true. MHP email verification is required for new social accounts. Existing matching emails return account_link_required. Google requires a fresh ID token (iat within 5 minutes); tokens are accepted once."
+          "device_name",
+          "nonce"
+        ]
       },
-      "SocialLinkInput": {
+      "GoogleLinkInput": {
+        "type": "object",
+        "properties": {
+          "id_token": {
+            "type": "string",
+            "maxLength": 16000
+          },
+          "current_password": {
+            "type": "string",
+            "format": "password",
+            "writeOnly": true,
+            "maxLength": 4096
+          },
+          "challenge_id": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        "required": [
+          "id_token",
+          "current_password",
+          "challenge_id"
+        ]
+      },
+      "AppleLinkInput": {
         "type": "object",
         "properties": {
           "id_token": {
@@ -3688,7 +3906,8 @@
         },
         "required": [
           "id_token",
-          "current_password"
+          "current_password",
+          "nonce"
         ]
       },
       "Workspace": {

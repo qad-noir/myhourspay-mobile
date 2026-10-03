@@ -1,77 +1,67 @@
 import 'package:flutter/foundation.dart';
-import 'package:google_sign_in/google_sign_in.dart';
+import 'package:flutter/services.dart';
 
 import '../../core/api_client.dart';
+import 'google_browser_stub.dart'
+    if (dart.library.js_interop) 'google_browser.dart';
 
 abstract interface class GoogleIdentity {
   bool get configured;
-  Future<String> acquireIdToken();
+  Future<GoogleCredential> acquireCredential(String nonce);
 }
 
-/// Provider credentials stay in memory for one exchange; MHP owns the session.
+class GoogleCredential {
+  const GoogleCredential(this.idToken, {this.name = ''});
+  final String idToken, name;
+}
+
 class NativeGoogleIdentity implements GoogleIdentity {
   NativeGoogleIdentity({required this.serverClientId, this.iosClientId = ''});
   final String serverClientId, iosClientId;
-  Future<void>? _initialization;
+  static const channel = MethodChannel('myhourspay/google_identity');
   @override
   bool get configured =>
-      !kIsWeb &&
       serverClientId.endsWith('.apps.googleusercontent.com') &&
-      (defaultTargetPlatform == TargetPlatform.android ||
-          (defaultTargetPlatform == TargetPlatform.iOS &&
-              iosClientId.endsWith('.apps.googleusercontent.com')));
-
+      (kIsWeb || defaultTargetPlatform == TargetPlatform.android);
   @override
-  Future<String> acquireIdToken() async {
+  Future<GoogleCredential> acquireCredential(String nonce) async {
     if (!configured) {
       throw const ApiFailure(
         'google_not_configured',
         'Google sign-in is not configured for this platform.',
       );
     }
-    final sdk = GoogleSignIn.instance;
     try {
-      await (_initialization ??= sdk.initialize(
-        serverClientId: serverClientId,
-        clientId: defaultTargetPlatform == TargetPlatform.iOS
-            ? iosClientId
-            : null,
-      ));
-      // Every backend exchange requires a fresh, single-use provider credential.
-      await sdk.signOut();
-      final user = await sdk.authenticate();
-      final token = user.authentication.idToken;
-      if (token == null || token.isEmpty) {
+      final result = kIsWeb
+          ? await authenticateGoogleWeb(serverClientId, nonce)
+          : await channel.invokeMapMethod<String, dynamic>('authenticate', {
+              'serverClientId': serverClientId,
+              'clientId': iosClientId,
+              'nonce': nonce,
+            });
+      if (result?['error'] != null) {
+        throw PlatformException(code: result!['error'] as String);
+      }
+      final token = result?['idToken'];
+      if (token is! String || token.isEmpty) {
         throw const ApiFailure(
           'google_token_missing',
           'Google did not provide a sign-in credential. Please try again.',
         );
       }
-      return token;
-    } on GoogleSignInException catch (error) {
-      throw switch (error.code) {
-        GoogleSignInExceptionCode.canceled => const ApiFailure(
-          'google_canceled',
-          'Google sign-in was canceled or could not complete. Please try again.',
-        ),
-        GoogleSignInExceptionCode.clientConfigurationError ||
-        GoogleSignInExceptionCode.providerConfigurationError =>
-          const ApiFailure(
-            'google_configuration',
-            'Google sign-in configuration needs checking. Contact support.',
-          ),
-        _ => const ApiFailure(
-          'google_unavailable',
-          'Google sign-in could not complete. Please try again.',
-        ),
-      };
-    } finally {
-      // This clears SDK state, not the phone's Google account or its permissions.
-      if (_initialization != null) {
-        try {
-          await sdk.signOut();
-        } catch (_) {}
-      }
+      return GoogleCredential(
+        token,
+        name: (result?['name'] as String? ?? '').trim(),
+      );
+    } on PlatformException catch (error) {
+      throw ApiFailure(
+        error.code == 'google_canceled'
+            ? 'google_canceled'
+            : 'google_unavailable',
+        error.code == 'google_canceled'
+            ? 'Google sign-in was canceled. Please try again.'
+            : 'Google sign-in could not complete. Please try again.',
+      );
     }
   }
 }

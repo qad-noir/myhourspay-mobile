@@ -1,6 +1,6 @@
 # Configure Google and Apple mobile sign-in
 
-## Android Google integration (build 5)
+## Android Google integration (build 9)
 
 The native Google SDK adapter is now wired into both login and signup. Build using `flutter build apk --release --dart-define-from-file=config/production.json`. This public configuration file includes the production API and the supplied Web OAuth client ID. No client secret is included or needed in Flutter. Builds without `GOOGLE_SERVER_CLIENT_ID` hide Google.
 
@@ -8,11 +8,15 @@ Current Android OAuth client: `69237986520-u5q4fqgij9dr4ijm2bfdcq7t6buq60qd.apps
 
 Web/backend audience: `69237986520-s7mltqvpk5aqt3l2pljgemcmr8vtnvb1.apps.googleusercontent.com`. Set that exact value in production `MOBILE_GOOGLE_AUDIENCES`. Register debug package `com.example.myhourspay.dev` separately if testing debug builds. Register final store package and release/Play signing separately before launch.
 
-The adapter performs explicit native authentication and a fresh single-use ID-token exchange. It requests no Calendar/Contacts access, stores no provider token, and routes the MHP response through existing MFA/email-verification/secure-session handling. Cancellation and provider configuration failures release the busy state. Existing matching MHP emails require authenticated linking; the mobile account-link UI is still pending and identities are never silently merged.
+The adapter performs explicit native authentication and a fresh single-use ID-token exchange. It requests no Calendar/Contacts access, stores no provider token, and routes the MHP response through existing MFA/email-verification/secure-session handling. Cancellation and provider configuration failures release the busy state. Existing matching MHP emails require authenticated linking. Account now offers Link Google with current-password confirmation; identities are never silently merged.
 
 The current SocialInput contract and Laravel social controller do not support marketing_consent. Signup shows this limitation: the checked promotional preference applies to password registration only. A backend contract/controller update is required before social registration can persist promotional consent.
 
-iOS uses the same native adapter only when `GOOGLE_IOS_CLIENT_ID` is supplied. Create its own OAuth client matching the bundle ID, then add its reversed client ID under `CFBundleURLTypes` in ios/Runner/Info.plist. No fake iOS IDs/URL schemes were inserted. iOS build/device testing remains pending macOS/Xcode access. Flutter web Google buttons remain hidden: web requires registered origins and Google's SDK-rendered button; native authenticate cannot be used on web.
+Build 9 uses contract 2.0: obtain a new `/auth/google/challenge`, pass its raw nonce unchanged to Android Credential Manager, then exchange `challenge_id`, `id_token` and `device_name`. Every new attempt, including linking, requests a new challenge. No provider credentials/nonces are persisted or logged. Old build 8 is incompatible with the new Google protocol.
+
+Flutter web now uses an isolated same-origin browser document per attempt, initializes Google Identity Services once in that document with the raw nonce, and displays Google's official button in a cancelable dialog. Register the exact Flutter origin in the Web OAuth client's Authorized JavaScript origins. Use a fixed development port, for example `flutter run -d chrome --web-port=8080 --dart-define-from-file=config/development.example.json`, and register `http://localhost:8080` if that is the actual origin. Configure Laravel CORS to allow that origin. Client code compiles for web; real browser Google login remains unverified.
+
+iOS Google is deferred at the owner's explicit request until an iOS OAuth client exists. Its button remains gated. A future per-attempt adapter must use GoogleSignIn 9.2.0's nonce-bearing sign-in API (or a verified compatible version), configure the bundle/client/reversed-client URL scheme and be built/tested with macOS/Xcode. No iOS nonce adapter or successful iOS build is claimed.
 
 ## Laravel configuration
 
@@ -38,7 +42,7 @@ Check `GET https://mhp.glsltd.co.uk/api/v1/mobile/auth/providers`. Its documente
 
 Create/configure a Google OAuth project and consent screen. Create a Web OAuth client for the mobile backend's server client ID, Android clients matching the actual app package and signing SHA-1, and an iOS client matching the bundle ID. Register both development and release identities when using both. Production APKs currently use the scaffold `com.example.myhourspay`; debug builds add `.dev`. Choose final store identities and release signing before registering final clients. Play App Signing uses the Play app-signing certificate for installed store builds.
 
-The Flutter adapter must initialize the Google SDK with the correct serverClientId (and appropriate iOS client/URL settings), obtain a fresh provider ID token, and send it to `POST /auth/google` with `device_name`. New-account requests also need explicit name/terms and the separate marketing choice. The provider ID token must never be saved as an MHP bearer token. Handle authenticated, MFA challenge and email-verification responses through the same session flow.
+The Flutter adapter must request a new server Google challenge, pass its raw nonce to the provider request, and send the resulting ID token with challenge_id and device_name. New-account requests use the Google-provided name and explicitly accepted terms. Promotional consent is supported only for email/password registration. The provider ID token must never be saved as an MHP bearer token. Handle authenticated, MFA challenge and email-verification responses through the same session flow.
 
 Official setup: [Google Android sign-in](https://codelabs.developers.google.com/sign-in-with-google-android), [signing client authentication](https://developers.google.com/android/guides/client-auth).
 
@@ -52,6 +56,6 @@ Official setup: [Apple environment configuration](https://developer.apple.com/do
 
 ## What makes buttons appear in this Flutter build
 
-The app fetches `/auth/providers`. A button appears only when its backend flag is true **and a real platform adapter is configured**. Android Google is configured in build 5 using the public production configuration above. iOS Google needs its client and URL scheme; Apple adapters and Android callback/handoff remain unconfigured.
+The app fetches `/auth/providers`. A button appears only when its backend flag is true **and a real platform adapter is configured**. Android and web Google adapters are configured in build 9 using the public Web client ID above; web also needs registered browser origins. iOS Google needs its client and URL scheme; Apple adapters and Android callback/handoff remain unconfigured.
 
 The test-only sign-up preview enables both buttons with isolated callbacks for visual review. It does not perform or pretend to succeed at provider authentication, and is not reachable from release routing. See docs/api/mobile-integration.md for exchange, nonce, linking and remaining store-release requirements.

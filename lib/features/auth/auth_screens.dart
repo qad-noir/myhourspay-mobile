@@ -31,6 +31,7 @@ class _LoginScreenState extends State<LoginScreen> {
   bool signup = false, hidden = true, preparing = false;
   @override
   void dispose() {
+    widget.model.cancelGoogleAttempt();
     email.dispose();
     password.dispose();
     super.dispose();
@@ -503,7 +504,21 @@ class _ForgotPasswordDialogState extends State<ForgotPasswordDialog> {
                   });
                   try {
                     await widget.model.auth.forgot(email.text.trim());
-                    if (mounted) setState(() => sent = true);
+                    if (mounted && context.mounted) {
+                      final messenger = ScaffoldMessenger.of(context);
+                      setState(() => sent = true);
+                      Navigator.pop(context);
+                      messenger.hideCurrentSnackBar();
+                      messenger.showSnackBar(
+                        const SnackBar(
+                          content: Text(
+                            'If the account exists, a reset link has been sent. Check your email.',
+                          ),
+                          duration: Duration(seconds: 6),
+                          behavior: SnackBarBehavior.floating,
+                        ),
+                      );
+                    }
                   } on ApiFailure catch (failure) {
                     if (mounted) {
                       setState(

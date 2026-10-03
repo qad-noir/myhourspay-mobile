@@ -1,0 +1,24 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>Google sign-in</title></head>
+<body style="margin:0;background:#fbf8f3"><div id="google-button"></div>
+<script>
+let initialized = false;
+window.mhpInitializeGoogle = function(clientId, nonce, finish) {
+  if (initialized) return finish({error:'google_unavailable'});
+  initialized = true;
+  if (!window.google?.accounts?.id) return finish({error:'google_unavailable'});
+  google.accounts.id.initialize({client_id:clientId, nonce:nonce, auto_select:false,
+    callback:response => {
+      try {
+        const part = response.credential.split('.')[1].replace(/-/g, '+').replace(/_/g, '/');
+        const claims = JSON.parse(new TextDecoder().decode(Uint8Array.from(atob(part), c => c.charCodeAt(0))));
+        // Display name is a hint; Laravel validates the signed credential.
+        finish({idToken:response.credential, name:typeof claims.name === 'string' ? claims.name : ''});
+      } catch (_) {finish({error:'google_unavailable'});}
+    }
+  });
+  google.accounts.id.renderButton(document.getElementById('google-button'), {type:'standard',theme:'outline',size:'large',text:'continue_with',width:280});
+};
+</script>
+<script src="https://accounts.google.com/gsi/client"></script>
+</body></html>

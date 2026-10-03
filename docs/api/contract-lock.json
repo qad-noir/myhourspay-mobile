@@ -1,7 +1,7 @@
 {
-  "sha256": "bcda5bf85b2bf33755657c5686bef9ae1a0c3f42eeb3ae6e98fd9093271b1170",
-  "source_commit": "a973d70871330475ee4899ddf8df867215e7e364",
+  "sha256": "2d345ed0e1e93f178df8ac16823f65d9984b4c4add44913adbb87879a0f5112b",
   "source_repository": "C:/Users/HP-MC/Documents/laravel/myhourspay",
-  "source_path": "docs/api/mobile.openapi.yaml",
-  "version": "1.0.0"
+  "source_path": "production-patches/flutter-google-nonce-handoff-2026-10-03-14-11-37/docs/api/mobile.openapi.yaml",
+  "version": "2.0.0",
+  "source_artifact": "flutter-google-nonce-handoff-2026-10-03-14-11-37"
 }

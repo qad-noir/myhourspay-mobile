@@ -6,6 +6,7 @@ import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:myhourspay/shared/widgets.dart';
+import 'package:myhourspay/shared/branded_loading_screen.dart';
 import 'package:timezone/data/latest.dart' as tz;
 
 import 'support/visual_fixtures.dart';
@@ -29,6 +30,46 @@ void main() {
     const Size(360, 800),
     const Size(430, 932),
   ]) {
+    testWidgets('branded loading at ${size.width.toInt()}px', (tester) async {
+      tester.view.physicalSize = size;
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      final key = GlobalKey();
+      await tester.pumpWidget(
+        RepaintBoundary(
+          key: key,
+          child: MaterialApp(
+            debugShowCheckedModeBanner: false,
+            theme: mhpTheme(),
+            builder: phoneShell,
+            home: const BrandedLoadingScreen(),
+          ),
+        ),
+      );
+      await tester.runAsync(
+        () async => precacheImage(
+          const AssetImage('assets/brand/brand-mark.png'),
+          key.currentContext!,
+        ),
+      );
+      await tester.pump(const Duration(milliseconds: 200));
+      expect(tester.takeException(), isNull);
+      if (const bool.fromEnvironment('MHP_CAPTURE')) {
+        await tester.runAsync(() async {
+          final boundary =
+              key.currentContext!.findRenderObject()! as RenderRepaintBoundary;
+          final picture = await boundary.toImage(pixelRatio: 1);
+          final data = await picture.toByteData(format: ui.ImageByteFormat.png);
+          final dir = Directory('docs/splash-review')
+            ..createSync(recursive: true);
+          File('${dir.path}/loading-${size.width.toInt()}.png')
+              .writeAsBytesSync(data!.buffer.asUint8List());
+          picture.dispose();
+        });
+      }
+      await tester.pumpWidget(const SizedBox());
+    });
     for (final name in visualNames) {
       testWidgets('$name at ${size.width.toInt()}px', (tester) async {
         tester.view.physicalSize = size;

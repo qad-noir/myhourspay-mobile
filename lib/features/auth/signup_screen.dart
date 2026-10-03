@@ -41,7 +41,6 @@ class _SignupScreenState extends State<SignupScreen> {
       marketing = true,
       submitting = false,
       showTermsError = false;
-  String? socialNameError;
   bool socialValidation = false;
   final clearedErrors = <String>{};
   SessionModel get model => widget.model;
@@ -52,6 +51,7 @@ class _SignupScreenState extends State<SignupScreen> {
   void changed(String key) => setState(() => clearedErrors.add(key));
   @override
   void dispose() {
+    widget.model.cancelGoogleAttempt();
     name.dispose();
     email.dispose();
     password.dispose();
@@ -129,20 +129,13 @@ class _SignupScreenState extends State<SignupScreen> {
       model.failure = null;
       clearedErrors.clear();
       showTermsError = !terms;
-      socialNameError = name.text.trim().isEmpty
-          ? 'Enter your full name.'
-          : null;
     });
     form.currentState!.validate();
-    if (!terms || socialNameError != null) return;
+    if (!terms) return;
     FocusScope.of(context).unfocus();
     setState(() => submitting = true);
     try {
-      await widget.providerActions[provider]!(
-        name.text.trim(),
-        terms,
-        marketing,
-      );
+      await widget.providerActions[provider]!('', terms, marketing);
     } finally {
       if (mounted) setState(() => submitting = false);
     }
@@ -189,9 +182,8 @@ class _SignupScreenState extends State<SignupScreen> {
               : AutofillHints.newPassword,
         ],
         decoration: InputDecoration(
-          hintText: label,
+          labelText: label,
           errorMaxLines: 3,
-          errorText: keyName == 'name' ? socialNameError : null,
           prefixIcon: Icon(icon),
           suffixIcon: secret
               ? IconButton(
@@ -213,10 +205,8 @@ class _SignupScreenState extends State<SignupScreen> {
                 )
               : null,
         ),
-        validator: (value) =>
-            socialValidation && keyName != 'name' ? null : validator(value),
+        validator: (value) => socialValidation ? null : validator(value),
         onChanged: (_) {
-          if (keyName == 'name') socialNameError = null;
           changed(keyName);
         },
         onFieldSubmitted: confirm ? (_) => submit() : null,
@@ -469,7 +459,7 @@ class _SignupScreenState extends State<SignupScreen> {
                     const Padding(
                       padding: EdgeInsets.only(bottom: 12),
                       child: Text(
-                        'Google sign-up needs your name and terms acceptance. Google supplies your email; no password is needed.\n\nPromotional consent above applies to email/password registration only. Google registration does not save that preference.',
+                        'Google supplies your name and email. Accept the terms to continue; no form fields are required.\n\nPromotional consent above applies to email/password registration only. Google registration does not save that preference.',
                         style: TextStyle(color: brandMuted, fontSize: 12),
                       ),
                     ),

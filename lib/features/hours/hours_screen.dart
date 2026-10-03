@@ -64,6 +64,8 @@ class _HoursScreenState extends State<HoursScreen> with WidgetsBindingObserver {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
+            duration: const Duration(seconds: 4),
+            behavior: SnackBarBehavior.floating,
             content: Text(
               model.failure == null ? 'Hours saved.' : 'Hours saved. Could not refresh the week; please try refreshing.',
             ),

@@ -13,6 +13,7 @@ import 'features/hours/hours_screen.dart';
 import 'features/hours/repository.dart';
 import 'features/session/session_model.dart';
 import 'shared/widgets.dart';
+import 'shared/branded_loading_screen.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -84,7 +85,13 @@ class _MhpAppState extends State<MhpApp> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       messenger.currentState?.hideCurrentSnackBar();
-      messenger.currentState?.showSnackBar(SnackBar(content: Text(message)));
+      messenger.currentState?.showSnackBar(
+        SnackBar(
+          content: Text(message),
+          duration: const Duration(seconds: 4),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
     });
   }
 
@@ -136,7 +143,7 @@ class _MhpAppState extends State<MhpApp> {
           providerActions: {
             if (widget.googleIdentity?.configured == true)
               'google': () => model.googleSignIn(
-                widget.googleIdentity!.acquireIdToken,
+                widget.googleIdentity!.acquireCredential,
                 widget.deviceLabelLoader,
               ),
           },
@@ -144,9 +151,8 @@ class _MhpAppState extends State<MhpApp> {
             if (widget.googleIdentity?.configured == true)
               'google': (name, terms, marketing) async {
                 await model.googleSignIn(
-                  widget.googleIdentity!.acquireIdToken,
+                  widget.googleIdentity!.acquireCredential,
                   widget.deviceLabelLoader,
-                  name: name,
                   terms: terms,
                 );
               },
@@ -187,25 +193,28 @@ class _MhpAppState extends State<MhpApp> {
             ],
           ),
         ),
-        SessionPhase.restoring => Scaffold(
-          body: PageBody(
-            children: [
-              const SizedBox(height: 64),
-              if (model.busy)
-                const Center(child: CircularProgressIndicator())
-              else ...[
-                ErrorNotice(model.failure),
-                FilledButton(
-                  onPressed: model.restore,
-                  child: const Text('Retry connection'),
+        SessionPhase.restoring =>
+          model.busy
+              ? const BrandedLoadingScreen()
+              : Scaffold(
+                  body: PageBody(
+                    children: [
+                      const SizedBox(height: 64),
+                      if (model.busy)
+                        const Center(child: CircularProgressIndicator())
+                      else ...[
+                        ErrorNotice(model.failure),
+                        FilledButton(
+                          onPressed: model.restore,
+                          child: const Text('Retry connection'),
+                        ),
+                        TextButton(
+                          onPressed: model.logout,
+                          child: const Text('Sign out on this device'),
+                        ),
+                      ],
+                    ],
+                  ),
                 ),
-                TextButton(
-                  onPressed: model.logout,
-                  child: const Text('Sign out on this device'),
-                ),
-              ],
-            ],
-          ),
-        ),
       };
 }

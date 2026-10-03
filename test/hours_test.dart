@@ -311,7 +311,7 @@ void main() {
     final spec = jsonDecode(
       File('docs/api/mobile.openapi.yaml').readAsStringSync(),
     ) as Json;
-    expect(spec['info']['version'], '1.0.0');
+    expect(spec['info']['version'], '2.0.0');
     expect(
       spec['components']['schemas']['TokenResponse']['required'],
       containsAll(['status', 'access_token']),

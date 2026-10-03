@@ -80,7 +80,7 @@ Future<void> create(WidgetTester tester) async {
 
 void main() {
   testWidgets(
-    'Google checks name and terms, clears stale password errors and needs no email/password',
+    'Google checks consent only, clears stale password errors and needs no form fields',
     (tester) async {
       var attempts = 0;
       final model = makeSignupModel(
@@ -99,7 +99,7 @@ void main() {
             providerActions: {
               'google': (name, terms, marketing) async {
                 attempts++;
-                expect(name, 'Google User');
+                expect(name, '');
                 expect(terms, true);
               },
             },
@@ -124,11 +124,6 @@ void main() {
         ),
         findsNothing,
       );
-      await tester.enterText(
-        find.byKey(const ValueKey('signup-name')),
-        'Google User',
-      );
-      await tester.pumpAndSettle();
       await consent(tester);
       await tester.ensureVisible(
         find.widgetWithText(OutlinedButton, 'Continue with Google'),

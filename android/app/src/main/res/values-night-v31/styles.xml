@@ -1,0 +1,12 @@
+<resources>
+    <style name="LaunchTheme" parent="@android:style/Theme.Light.NoTitleBar">
+        <item name="android:windowSplashScreenBackground">@color/mhp_surface</item>
+        <item name="android:windowSplashScreenAnimatedIcon">@drawable/mhp_splash_mark</item>
+        <item name="android:windowSplashScreenIconBackgroundColor">@color/mhp_surface</item>
+        <item name="android:windowBackground">@drawable/launch_background</item>
+        <item name="android:statusBarColor">@color/mhp_surface</item>
+        <item name="android:navigationBarColor">@color/mhp_surface</item>
+        <item name="android:windowLightStatusBar">true</item>
+        <item name="android:windowLightNavigationBar">true</item>
+    </style>
+</resources>

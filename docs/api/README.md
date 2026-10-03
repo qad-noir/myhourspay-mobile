@@ -1,8 +1,9 @@
 # Canonical contract pin
 
-Version: **1.0.0**, implemented, copied byte-for-byte from Laravel at
-`a973d70871330475ee4899ddf8df867215e7e364` (after e9653df).
-`contract-lock.json` records the source and SHA-256. This replaces 0.1.0-draft.
+Version: **2.0.0**, copied byte-for-byte from the Laravel handoff artifact
+`production-patches/flutter-google-nonce-handoff-2026-10-03-14-11-37`.
+`contract-lock.json` records the source artifact and SHA-256. Google now requires
+per-attempt nonce-bound challenges; build 8 is incompatible with this Google flow.
 The production server entry is a deployment target, not deployment evidence.
 
 The file uses JSON syntax, valid YAML 1.2 / OpenAPI 3.1. Handwritten typed repositories

@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 import '../../core/api_client.dart';
 import '../../core/session_store.dart';
 import '../auth/auth_repository.dart';
+import '../auth/google_identity.dart';
 import '../hours/models.dart';
 import '../hours/repository.dart';
 
@@ -62,6 +63,8 @@ class SessionModel extends ChangeNotifier {
   DateTime? _challengeExpiry;
   Timer? _expiry;
   int _generation = 0;
+  int _googleAttempt = 0;
+  void cancelGoogleAttempt() => ++_googleAttempt;
   int sessionRevision = 0;
   bool _disposed = false;
   void _notify() {
@@ -163,9 +166,8 @@ class SessionModel extends ChangeNotifier {
   Future<bool> register(Json input) =>
       perform(() async => _accept(await auth.register(input)));
   Future<bool> googleSignIn(
-    Future<String> Function() acquireToken,
+    Future<GoogleCredential> Function(String nonce) acquireToken,
     Future<String> Function() deviceLabel, {
-    String? name,
     bool terms = false,
   }) => perform(() async {
     if (providers['google'] != true) {
@@ -174,12 +176,31 @@ class SessionModel extends ChangeNotifier {
         'Google sign-in is currently unavailable.',
       );
     }
+    final attempt = _generation;
+    final googleAttempt = ++_googleAttempt;
+    bool current() =>
+        !_disposed && attempt == _generation && googleAttempt == _googleAttempt;
     final device = await deviceLabel();
-    final credential = await acquireToken();
-    try {
-      await _accept(
-        await auth.google(credential, device, name: name, terms: terms),
+    if (!current()) return;
+    final challenge = await auth.googleChallenge();
+    if (!current()) return;
+    final credential = await acquireToken(challenge.nonce);
+    if (!current()) return;
+    if (!challenge.expiresAt.isAfter(DateTime.now())) {
+      throw const ApiFailure(
+        'google_challenge_expired',
+        'Start a new Google sign-in attempt.',
       );
+    }
+    try {
+      final result = await auth.google(
+        credential.idToken,
+        device,
+        challengeId: challenge.id,
+        name: terms ? credential.name : null,
+        terms: terms,
+      );
+      if (current()) await _accept(result);
     } on ApiFailure catch (error) {
       final safeCode = RegExp(r'^[a-z_]{1,64}$').hasMatch(error.code)
           ? error.code
@@ -190,7 +211,7 @@ class SessionModel extends ChangeNotifier {
       if (error.code == 'account_link_required') {
         throw const ApiFailure(
           'account_link_required',
-          'This email already has an MHP account. Sign in with your password. Google linking requires the existing account to be authenticated.',
+          'This email already has an account. Sign in with your password before linking Google.',
           status: 409,
         );
       }
@@ -198,7 +219,7 @@ class SessionModel extends ChangeNotifier {
           error.fields.containsKey('name')) {
         throw const ApiFailure(
           'google_signup_required',
-          'To create a new account with Google, choose Create account, enter your name and accept the terms.',
+          'To create a new account with Google, choose Create account and accept the terms. Google supplies your name and email.',
           status: 422,
         );
       }
@@ -206,6 +227,9 @@ class SessionModel extends ChangeNotifier {
           ![
             'invalid_provider_credential',
             'provider_email_required',
+            'google_challenge_invalid',
+            'google_challenge_expired',
+            'google_nonce_mismatch',
           ].contains(error.code)) {
         throw const ApiFailure(
           'google_exchange_rejected',
@@ -215,6 +239,33 @@ class SessionModel extends ChangeNotifier {
       }
       rethrow;
     }
+  });
+  Future<bool> linkGoogle(
+    Future<GoogleCredential> Function(String nonce) acquireToken,
+    String password,
+  ) => perform(() async {
+    if (phase != SessionPhase.authenticated || providers['google'] != true) {
+      throw const ApiFailure(
+        'provider_unavailable',
+        'Sign in to your verified account before linking Google.',
+      );
+    }
+    final attempt = _generation;
+    final googleAttempt = ++_googleAttempt;
+    bool current() =>
+        !_disposed && attempt == _generation && googleAttempt == _googleAttempt;
+    final challenge = await auth.googleChallenge();
+    if (!current()) return;
+    final credential = await acquireToken(challenge.nonce);
+    if (!current()) return;
+    if (!challenge.expiresAt.isAfter(DateTime.now())) {
+      throw const ApiFailure(
+        'google_challenge_expired',
+        'Start a new Google sign-in attempt.',
+      );
+    }
+    await auth.linkGoogle(challenge.id, credential.idToken, password);
+    if (current()) toast = 'Google linked successfully.';
   });
   Future<bool> completeMfa(String code, bool recovery) => perform(() async {
     if (_challenge == null || !_challengeExpiry!.isAfter(DateTime.now())) {
@@ -230,7 +281,7 @@ class SessionModel extends ChangeNotifier {
       perform(() async => _accept(await auth.verify(code)));
   Future<bool> resend() => perform(() async {
     await auth.resend();
-    notice = 'Verification request processed. Check your email.';
+    toast = 'Verification request processed. Check your email.';
   });
   Future<void> _accept(AuthResult result) async {
     if (result.status == 'two_factor_required') {
@@ -300,7 +351,7 @@ class SessionModel extends ChangeNotifier {
   Future<bool> createWorkspace(Json input) => perform(() async {
     final created = await hours.createWorkspace(input);
     workspaces = [...workspaces.where((w) => w.id != created.id), created];
-    notice = 'Workspace created successfully.';
+    toast = 'Workspace created successfully.';
     // Creation is already confirmed. A failed subsequent read must not invite
     // another POST or hide the new workspace from the user.
     try {
@@ -320,6 +371,7 @@ class SessionModel extends ChangeNotifier {
     }
   });
   Future<void> selectWorkspace(Workspace value, {bool persist = true}) async {
+    notice = null;
     ++_generation;
     _resetOverview();
     workspace = value;

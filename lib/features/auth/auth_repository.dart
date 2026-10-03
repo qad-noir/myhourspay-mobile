@@ -52,6 +52,21 @@ class DeviceSession {
   final String? expiresAt, lastUsedAt;
 }
 
+class GoogleChallenge {
+  GoogleChallenge.fromJson(Json json)
+    : id = json['challenge_id'] as String,
+      nonce = json['nonce'] as String,
+      expiresAt = DateTime.parse(json['expires_at'] as String) {
+    if (json['nonce_mode'] != 'raw' ||
+        !RegExp(r'^[0-9a-f]{64}$').hasMatch(nonce) ||
+        !RegExp(r'^[0-9a-fA-F-]{36}$').hasMatch(id)) {
+      throw const FormatException('Unsupported Google challenge');
+    }
+  }
+  final String id, nonce;
+  final DateTime expiresAt;
+}
+
 class AuthRepository {
   AuthRepository(this.api);
   final ApiClient api;
@@ -86,9 +101,29 @@ class AuthRepository {
       body: data,
     ),
   );
+  Future<GoogleChallenge> googleChallenge() async => GoogleChallenge.fromJson(
+    await api.request('POST', '/auth/google/challenge', authenticated: false),
+  );
+  Future<void> linkGoogle(
+    String challengeId,
+    String idToken,
+    String password,
+  ) async {
+    await api.request(
+      'POST',
+      '/auth/providers/google/link',
+      body: {
+        'challenge_id': challengeId,
+        'id_token': idToken,
+        'current_password': password,
+      },
+    );
+  }
+
   Future<AuthResult> google(
     String idToken,
     String deviceName, {
+    required String challengeId,
     String? name,
     bool terms = false,
   }) async => AuthResult.fromJson(
@@ -97,6 +132,7 @@ class AuthRepository {
       '/auth/google',
       authenticated: false,
       body: {
+        'challenge_id': challengeId,
         'id_token': idToken,
         'device_name': deviceName,
         'name': ?name,

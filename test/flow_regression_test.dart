@@ -144,6 +144,10 @@ void main() {
       expect(model.phase, SessionPhase.authenticated);
       expect(find.text('Choose your workspace'), findsOneWidget);
       expect(find.text('Workspace created successfully.'), findsOneWidget);
+      expect(model.notice, isNull);
+      await tester.pump(const Duration(seconds: 5));
+      await tester.pumpAndSettle();
+      expect(find.text('Workspace created successfully.'), findsNothing);
       expect(find.text('Test workspace'), findsOneWidget);
     },
   );
@@ -197,7 +201,7 @@ void main() {
       await tester.tap(find.widgetWithText(FilledButton, 'Create workspace'));
       await tester.pumpAndSettle();
       expect(posted!['weekly_target_minutes'], 2250);
-      expect(model.notice, 'Workspace created successfully.');
+      expect(model.notice, isNull);
       model.dispose();
     },
   );
@@ -219,13 +223,23 @@ void main() {
           MaterialApp(
             theme: mhpTheme(),
             home: Scaffold(
-              body: ForgotPasswordDialog(
-                model: model,
-                initialEmail: 'test@example.test',
+              body: Builder(
+                builder: (context) => TextButton(
+                  onPressed: () => showDialog<void>(
+                    context: context,
+                    builder: (_) => ForgotPasswordDialog(
+                      model: model,
+                      initialEmail: 'test@example.test',
+                    ),
+                  ),
+                  child: const Text('Open reset'),
+                ),
               ),
             ),
           ),
         );
+        await tester.tap(find.text('Open reset'));
+        await tester.pumpAndSettle();
         await tester.tap(find.text('Send reset link'));
         await tester.pump();
         expect(find.text('Requesting a reset link…'), findsOneWidget);
@@ -241,7 +255,7 @@ void main() {
           pending.complete();
           await tester.pumpAndSettle();
           expect(find.textContaining('If the account exists'), findsOneWidget);
-          expect(find.text('Done'), findsOneWidget);
+          expect(find.byType(AlertDialog), findsNothing);
           expect(find.text('Send reset link'), findsNothing);
         }
         if (!pending.isCompleted) pending.complete();

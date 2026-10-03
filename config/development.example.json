@@ -1,0 +1,5 @@
+{
+  "APP_ENV": "development",
+  "API_BASE_URL": "http://127.0.0.1:8000/api/v1/mobile",
+  "GOOGLE_SERVER_CLIENT_ID": "69237986520-s7mltqvpk5aqt3l2pljgemcmr8vtnvb1.apps.googleusercontent.com"
+}

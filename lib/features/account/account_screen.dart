@@ -4,6 +4,7 @@ import '../../core/api_client.dart';
 import '../../core/device_name.dart';
 import '../../shared/widgets.dart';
 import '../auth/auth_repository.dart';
+import '../auth/google_identity.dart';
 import '../session/session_model.dart';
 
 class AccountScreen extends StatefulWidget {
@@ -14,7 +15,74 @@ class AccountScreen extends StatefulWidget {
 }
 
 class _AccountScreenState extends State<AccountScreen> {
+  final google = NativeGoogleIdentity(
+    serverClientId: const String.fromEnvironment('GOOGLE_SERVER_CLIENT_ID'),
+    iosClientId: const String.fromEnvironment('GOOGLE_IOS_CLIENT_ID'),
+  );
+  Future<void> linkGoogle() async {
+    final password = TextEditingController();
+    try {
+      final confirmed = await showDialog<bool>(
+        context: context,
+        builder: (dialogContext) => AlertDialog(
+          title: const Text('Link Google'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text(
+                'Confirm your current password before choosing your Google account. If you registered socially, set a password using password recovery first.',
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: password,
+                obscureText: true,
+                decoration: const InputDecoration(
+                  labelText: 'Current password',
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext, false),
+              child: const Text('Cancel'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(dialogContext, true),
+              child: const Text('Continue'),
+            ),
+          ],
+        ),
+      );
+      if (confirmed != true || !mounted) return;
+      if (password.text.isEmpty) {
+        setState(
+          () => failure = const ApiFailure(
+            'invalid_credentials',
+            'Enter your current password.',
+          ),
+        );
+        return;
+      }
+      final success = await widget.model.linkGoogle(
+        google.acquireCredential,
+        password.text,
+      );
+      if (mounted) {
+        setState(() => failure = success ? null : widget.model.failure);
+      }
+    } finally {
+      password.dispose();
+    }
+  }
+
   List<DeviceSession> sessions = [];
+  @override
+  void dispose() {
+    widget.model.cancelGoogleAttempt();
+    super.dispose();
+  }
+
   bool loading = true;
   ApiFailure? failure;
   @override
@@ -84,8 +152,13 @@ class _AccountScreenState extends State<AccountScreen> {
       if (!mounted) return;
       setState(() => sessions.removeWhere((item) => item.id == session.id));
       widget.model.deviceSessions = List.of(sessions);
-      ScaffoldMessenger.of(context)
-          .showSnackBar(const SnackBar(content: Text('Device revoked.')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Device revoked.'),
+          duration: Duration(seconds: 4),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
     } on ApiFailure catch (e) {
       if (mounted) setState(() => failure = e);
     } catch (_) {
@@ -172,6 +245,12 @@ class _AccountScreenState extends State<AccountScreen> {
             ),
           ),
           const SizedBox(height: 28),
+          if (google.configured && widget.model.providers['google'] == true)
+            OutlinedButton.icon(
+              onPressed: widget.model.busy ? null : linkGoogle,
+              icon: const Icon(Icons.link),
+              label: const Text('Link Google'),
+            ),
           const SectionLabel('DEVICES'),
           ErrorNotice(failure),
           if (loading && widget.model.deviceSessions == null)

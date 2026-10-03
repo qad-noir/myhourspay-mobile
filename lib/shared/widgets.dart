@@ -301,16 +301,24 @@ class LoadingCards extends StatelessWidget {
 
 String friendlyFailure(ApiFailure f) {
   if (f.code == 'account_link_required') {
-    return 'This email already has an MHP account. Sign in with your password before linking Google.';
+    return 'This email already has an account. Sign in with your password before linking Google.';
   }
   if (f.code == 'credential_already_used') {
     return 'Start a new Google or Apple sign-in attempt.';
   }
+  if ([
+    'google_challenge_used',
+    'google_challenge_expired',
+    'google_challenge_invalid',
+    'google_nonce_mismatch',
+  ].contains(f.code)) {
+    return 'This Google sign-in attempt is no longer valid. Please start a new attempt.';
+  }
   if (f.code == 'google_signup_required') {
-    return 'To create a new account with Google, choose Create account, enter your name and accept the terms.';
+    return 'To create a new account with Google, choose Create account and accept the terms. Google supplies your name and email.';
   }
   if (f.code == 'invalid_provider_credential') {
-    return 'Google or Apple rejected the sign-in credential. Start a new sign-in attempt. If it continues, contact support to check the provider configuration.';
+    return 'Google or Apple rejected the sign-in credential. Start a new sign-in attempt. If it continues, contact support.';
   }
   if (f.code == 'provider_email_required') {
     return 'Your sign-in provider must share an email address to continue.';
