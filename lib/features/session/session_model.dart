@@ -406,6 +406,11 @@ class SessionModel extends ChangeNotifier {
     }
   });
   Future<void> selectWorkspace(Workspace value, {bool persist = true}) async {
+    choosingWorkspace = false;
+    if (workspace?.id == value.id) {
+      _notify();
+      return;
+    }
     notice = null;
     ++_generation;
     _resetOverview();
@@ -561,13 +566,15 @@ class SessionModel extends ChangeNotifier {
     await reload();
   }
 
+  bool choosingWorkspace = false;
+
   void switchWorkspace() {
-    ++_generation;
-    _resetOverview();
-    workspace = null;
-    page = null;
-    loadingWeek = false;
-    failure = null;
+    choosingWorkspace = true;
+    _notify();
+  }
+
+  void cancelWorkspaceSwitch() {
+    choosingWorkspace = false;
     _notify();
   }
 
@@ -606,6 +613,7 @@ class SessionModel extends ChangeNotifier {
   }
 
   Future<void> _clear(SessionPhase next) async {
+    choosingWorkspace = false;
     ++_generation;
     _resetOverview();
     monthly.clear();

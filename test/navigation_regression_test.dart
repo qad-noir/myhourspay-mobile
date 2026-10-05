@@ -317,7 +317,15 @@ void main() {
       addTearDown(model.dispose);
       final second = Workspace.fromJson({...workspace, 'id': 2});
       await model.selectWorkspace(second);
+      final previousPage = model.page;
+      final previousWeek = model.week;
       model.switchWorkspace();
+      expect(model.choosingWorkspace, isTrue);
+      expect(model.workspace?.id, 2);
+      model.cancelWorkspaceSwitch();
+      expect(model.choosingWorkspace, isFalse);
+      expect(model.page, same(previousPage));
+      expect(model.week, previousWeek);
       expect(model.selectedWorkspaceId, 2);
       await model.logout();
       expect(model.selectedWorkspaceId, isNull);

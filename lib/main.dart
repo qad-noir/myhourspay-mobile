@@ -190,7 +190,16 @@ class _MhpAppState extends State<MhpApp> {
         SessionPhase.onboardingRequired || SessionPhase.authenticated =>
           model.workspace == null
               ? WorkspaceScreen(model: model)
-              : HoursScreen(model: model),
+              : Stack(
+                  children: [
+                    HoursScreen(
+                      key: ValueKey(model.workspace!.id),
+                      model: model,
+                    ),
+                    if (model.choosingWorkspace)
+                      Positioned.fill(child: WorkspaceScreen(model: model)),
+                  ],
+                ),
         SessionPhase.restricted => Scaffold(
           body: PageBody(
             children: [

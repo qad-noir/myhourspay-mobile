@@ -53,6 +53,43 @@ void main() {
       )..addFont(rootBundle.load(entry.value))).load();
     }
   });
+  testWidgets('first overview frame masks unavailable values with skeletons', (
+    tester,
+  ) async {
+    final model = monthModel();
+    addTearDown(model.dispose);
+    model.monthly.bind(model.account!.id, model.workspace!);
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: mhpTheme(),
+        home: Scaffold(
+          body: MonthlyOverviewView(
+            model: model,
+            onAccount: () {},
+            onEntry: (_) {},
+          ),
+        ),
+      ),
+    );
+    expect(
+      tester
+          .widgetList<SkeletonRegion>(find.byType(SkeletonRegion))
+          .where((s) => s.loading),
+      isNotEmpty,
+    );
+    for (final element in find.text('Unavailable').evaluate()) {
+      var masked = false;
+      element.visitAncestorElements((ancestor) {
+        final widget = ancestor.widget;
+        if (widget is SkeletonRegion && widget.loading) masked = true;
+        return true;
+      });
+      expect(masked, isTrue);
+    }
+    await tester.pump(const Duration(milliseconds: 650));
+    expect(tester.takeException(), isNull);
+    await tester.pumpWidget(const SizedBox());
+  });
   testWidgets('dark monthly calendar retains readable selected-day contrast', (
     tester,
   ) async {
@@ -62,6 +99,16 @@ void main() {
     model.monthly.selectDay(DateTime(2026, 9, 18));
     await tester.pumpWidget(preview(model, dark: true));
     await tester.pumpAndSettle();
+    final overtime = find.text('Overtime');
+    final label = tester.widget<Text>(overtime);
+    final card = tester.widget<Container>(
+      find.ancestor(of: overtime, matching: find.byType(Container)).first,
+    );
+    final background = (card.decoration as BoxDecoration).color!;
+    final foreground = label.style!.color!;
+    final high = foreground.computeLuminance();
+    final low = background.computeLuminance();
+    expect((high + .05) / (low + .05), greaterThan(4.5));
     final cell = find.byKey(const ValueKey('month-day-2026-09-18'));
     await tester.ensureVisible(cell);
     final text = tester.widget<Text>(

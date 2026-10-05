@@ -327,36 +327,123 @@ class SectionLabel extends StatelessWidget {
   );
 }
 
+/// Keeps the content's measured geometry while a slow wave crosses its placeholder.
+class SkeletonRegion extends StatefulWidget {
+  const SkeletonRegion({super.key, required this.loading, required this.child});
+  final bool loading;
+  final Widget child;
+  @override
+  State<SkeletonRegion> createState() => _SkeletonRegionState();
+}
+
+class _SkeletonRegionState extends State<SkeletonRegion>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController wave = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 2600),
+  );
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    updateAnimation();
+  }
+
+  @override
+  void didUpdateWidget(SkeletonRegion oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    updateAnimation();
+  }
+
+  void updateAnimation() {
+    if (widget.loading && !MediaQuery.disableAnimationsOf(context)) {
+      if (!wave.isAnimating) wave.repeat();
+    } else {
+      wave.stop();
+    }
+  }
+
+  @override
+  void dispose() {
+    wave.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (!widget.loading) return widget.child;
+    final base = mhpColor(context, brandBorder);
+    return Semantics(
+      label: 'Loading',
+      child: ExcludeSemantics(
+        child: IgnorePointer(
+          child: Stack(
+            children: [
+              Opacity(opacity: 0, child: widget.child),
+              Positioned.fill(
+                child: AnimatedBuilder(
+                  animation: wave,
+                  builder: (context, _) => DecoratedBox(
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(8),
+                      gradient: LinearGradient(
+                        begin: Alignment(wave.value * 4 - 3, 0),
+                        end: Alignment(wave.value * 4 - 1, 0),
+                        colors: [
+                          base,
+                          Color.lerp(
+                            base,
+                            Theme.of(context).colorScheme.onSurface,
+                            .12,
+                          )!,
+                          base,
+                        ],
+                        stops: const [0, .5, 1],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class LoadingCards extends StatelessWidget {
   const LoadingCards({super.key});
   @override
   Widget build(BuildContext context) => Semantics(
     label: 'Loading',
-    child: Column(
-      children: [
-        for (var i = 0; i < 3; i++)
-          Padding(
-            padding: EdgeInsets.only(bottom: 12),
-            child: Panel(
-              child: Row(
-                children: [
-                  Container(
-                    width: 44,
-                    height: 44,
-                    color: mhpColor(context, brandBorder),
-                  ),
-                  SizedBox(width: 16),
-                  Expanded(
-                    child: Container(
-                      height: 16,
+    child: SkeletonRegion(
+      loading: true,
+      child: Column(
+        children: [
+          for (var i = 0; i < 3; i++)
+            Padding(
+              padding: EdgeInsets.only(bottom: 12),
+              child: Panel(
+                child: Row(
+                  children: [
+                    Container(
+                      width: 44,
+                      height: 44,
                       color: mhpColor(context, brandBorder),
                     ),
-                  ),
-                ],
+                    SizedBox(width: 16),
+                    Expanded(
+                      child: Container(
+                        height: 16,
+                        color: mhpColor(context, brandBorder),
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
-          ),
-      ],
+        ],
+      ),
     ),
   );
 }

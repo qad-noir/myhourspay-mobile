@@ -459,6 +459,14 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
         .firstOrNull;
     return Scaffold(
       appBar: AppBar(
+        automaticallyImplyLeading: false,
+        leading: m.workspace == null
+            ? null
+            : IconButton(
+                tooltip: 'Close workspace switch',
+                onPressed: m.cancelWorkspaceSwitch,
+                icon: const Icon(Icons.close),
+              ),
         actions: [
           IconButton(
             tooltip: 'Sign out',

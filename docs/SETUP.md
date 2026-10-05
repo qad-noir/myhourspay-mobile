@@ -87,3 +87,5 @@ References used for dependency setup:
 - https://pub.dev/packages/flutter_secure_storage
 - https://pub.dev/packages/uuid
 - https://pub.dev/packages/timezone
+
+Account website links default to `https://mhp.glsltd.co.uk` when `WEB_BASE_URL` is omitted. Override `WEB_BASE_URL` and `WEB_DOMAIN` in your build JSON to use another website; rebuild after changing these compile-time settings.

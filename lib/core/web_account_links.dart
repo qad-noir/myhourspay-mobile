@@ -1,6 +1,9 @@
 class WebAccountLinks {
   const WebAccountLinks();
-  static const base = String.fromEnvironment('WEB_BASE_URL');
+  static const base = String.fromEnvironment(
+    'WEB_BASE_URL',
+    defaultValue: 'https://mhp.glsltd.co.uk',
+  );
   static const domain = String.fromEnvironment('WEB_DOMAIN');
   static String get profile =>
       resolve(const String.fromEnvironment('WEB_PROFILE_URL'), base);

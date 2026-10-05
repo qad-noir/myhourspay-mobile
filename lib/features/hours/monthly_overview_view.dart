@@ -102,6 +102,23 @@ class MonthlyOverviewView extends StatelessWidget {
     final entry = state.selectedEntry;
     final selected = state.selectedDate!;
     final calendarReady = totals != null;
+    final awaitingCalendar = totals == null && state.calendarFailure == null;
+    final awaitingWeeks =
+        state.overtimeMinutes == null && state.weeksFailure == null;
+    final weekRows = state.snapshot?.fullWeeks != null
+        ? state.weeks
+        : [
+            for (
+              var day = weekStart(month);
+              !day.isAfter(fullWeeksEnd(month));
+              day = DateTime(day.year, day.month, day.day + 7)
+            )
+              HoursWeek(
+                start: day,
+                minutes: 0,
+                targetMinutes: workspace.targetMinutes,
+              ),
+          ];
     return SafeArea(
       bottom: false,
       child: RefreshIndicator(
@@ -200,11 +217,6 @@ class MonthlyOverviewView extends StatelessWidget {
                 InfoPanel(
                   'This workspace is read-only. You can view entries, but cannot add or change hours.',
                 ),
-              if (state.loading)
-                Padding(
-                  padding: EdgeInsets.only(bottom: 12),
-                  child: LinearProgressIndicator(minHeight: 3),
-                ),
               if (state.calendarFailure != null)
                 _RangeFailure(
                   title: 'Month hours could not be refreshed.',
@@ -234,6 +246,7 @@ class MonthlyOverviewView extends StatelessWidget {
                 builder: (context, c) {
                   final cards = [
                     _MetricCard(
+                      loading: awaitingCalendar,
                       label: 'Hours logged',
                       value: totals == null
                           ? 'Unavailable'
@@ -242,18 +255,19 @@ class MonthlyOverviewView extends StatelessWidget {
                           ? 'Refresh to load month hours'
                           : '${totals.workedDays} ${totals.workedDays == 1 ? 'worked day' : 'worked days'}',
                       icon: Icons.schedule,
-                      color: mhpColor(context, Color(0xfffff0e5)),
+                      color: Color(0xfffff0e5),
                       ink: mhpColor(context, brandInk),
                     ),
                     _MetricCard(
+                      loading: awaitingWeeks,
                       label: 'Overtime',
                       value: state.overtimeMinutes == null
                           ? 'Unavailable'
                           : '+${compactHours(state.overtimeMinutes!)}',
                       detail: 'Across full weeks',
                       icon: Icons.bar_chart,
-                      color: mhpColor(context, Color(0xffedf6ec)),
-                      ink: overtimeInk,
+                      color: brandGreen,
+                      ink: mhpColor(context, overtimeInk),
                     ),
                   ];
                   if (MediaQuery.textScalerOf(context).scale(1) > 1.35 ||
@@ -274,6 +288,7 @@ class MonthlyOverviewView extends StatelessWidget {
               ),
               SizedBox(height: 12),
               _Card(
+                loading: awaitingCalendar || awaitingWeeks,
                 child: Wrap(
                   alignment: WrapAlignment.spaceBetween,
                   crossAxisAlignment: WrapCrossAlignment.center,
@@ -299,6 +314,7 @@ class MonthlyOverviewView extends StatelessWidget {
               ),
               SizedBox(height: 14),
               _Card(
+                loading: awaitingCalendar || awaitingWeeks,
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
@@ -328,6 +344,7 @@ class MonthlyOverviewView extends StatelessWidget {
               ),
               SizedBox(height: 12),
               _Card(
+                loading: awaitingCalendar || awaitingWeeks,
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
@@ -383,6 +400,7 @@ class MonthlyOverviewView extends StatelessWidget {
               ),
               SizedBox(height: 16),
               _Card(
+                loading: awaitingCalendar || awaitingWeeks,
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
@@ -397,18 +415,18 @@ class MonthlyOverviewView extends StatelessWidget {
                         fontSize: 13,
                       ),
                     ),
-                    if (state.snapshot?.fullWeeks == null)
+                    if (state.snapshot?.fullWeeks == null && !awaitingWeeks)
                       Padding(
                         padding: EdgeInsets.symmetric(vertical: 16),
                         child: Text(
                           'Weekly totals unavailable. Refresh to load them.',
                         ),
                       ),
-                    for (var i = 0; i < state.weeks.length; i++) ...[
+                    for (var i = 0; i < weekRows.length; i++) ...[
                       if (i > 0) Divider(),
                       WeeklyBreakdownRow(
-                        week: state.weeks[i],
-                        scaleMinutes: state.weeks.fold<int>(0, (largest, week) {
+                        week: weekRows[i],
+                        scaleMinutes: weekRows.fold<int>(0, (largest, week) {
                           final value = week.minutes > (week.targetMinutes ?? 0)
                               ? week.minutes
                               : (week.targetMinutes ?? 0);
@@ -421,7 +439,7 @@ class MonthlyOverviewView extends StatelessWidget {
               ),
               SizedBox(height: 12),
               _Card(
-                color: mhpColor(context, Color(0xfffff0e5)),
+                color: Color(0xfffff0e5),
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -456,6 +474,7 @@ class MonthlyOverviewView extends StatelessWidget {
               ),
               SizedBox(height: 14),
               _Card(
+                loading: awaitingCalendar || awaitingWeeks,
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
@@ -504,7 +523,12 @@ String _updatedLabel(MonthlySnapshot? snapshot) {
 }
 
 class _Card extends StatelessWidget {
-  const _Card({required this.child, this.color = Colors.white});
+  const _Card({
+    required this.child,
+    this.color = Colors.white,
+    this.loading = false,
+  });
+  final bool loading;
   final Widget child;
   final Color color;
   @override
@@ -517,12 +541,13 @@ class _Card extends StatelessWidget {
       ),
       borderRadius: BorderRadius.circular(12),
     ),
-    child: child,
+    child: SkeletonRegion(loading: loading, child: child),
   );
 }
 
 class _MetricCard extends StatelessWidget {
   const _MetricCard({
+    this.loading = false,
     required this.label,
     required this.value,
     required this.detail,
@@ -530,12 +555,13 @@ class _MetricCard extends StatelessWidget {
     required this.color,
     required this.ink,
   });
+  final bool loading;
   final String label, value, detail;
   final IconData icon;
   final Color color, ink;
   @override
   Widget build(BuildContext context) => _Card(
-    color: mhpColor(context, color),
+    color: color,
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -544,28 +570,41 @@ class _MetricCard extends StatelessWidget {
           children: [
             Icon(
               icon,
-              color: ink == overtimeInk
-                  ? overtimeInk
-                  : mhpColor(context, brandAction),
+              color: label == 'Overtime' ? ink : mhpColor(context, brandAction),
               size: 22,
             ),
             SizedBox(width: 8),
-            Expanded(child: Text(label, style: TextStyle(fontSize: 13))),
+            Expanded(
+              child: Text(label, style: TextStyle(fontSize: 13, color: ink)),
+            ),
           ],
         ),
         SizedBox(height: 7),
-        Text(
-          value,
-          style: titleStyle.copyWith(
-            fontSize: 28,
-            color: ink,
-            letterSpacing: -.8,
+        SkeletonRegion(
+          loading: loading,
+          child: SizedBox(
+            width: double.infinity,
+            height: MediaQuery.textScalerOf(context).scale(40),
+            child: Text(
+              value,
+              style: titleStyle.copyWith(
+                fontSize: 28,
+                color: ink,
+                letterSpacing: -.8,
+              ),
+            ),
           ),
         ),
         SizedBox(height: 4),
-        Text(
-          detail,
-          style: TextStyle(color: mhpColor(context, brandMuted), fontSize: 12),
+        SkeletonRegion(
+          loading: loading,
+          child: Text(
+            detail,
+            style: TextStyle(
+              color: mhpColor(context, brandMuted),
+              fontSize: 12,
+            ),
+          ),
         ),
       ],
     ),
