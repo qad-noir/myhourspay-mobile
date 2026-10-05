@@ -414,38 +414,43 @@ class _SkeletonRegionState extends State<SkeletonRegion>
 class LoadingCards extends StatelessWidget {
   const LoadingCards({super.key});
   @override
-  Widget build(BuildContext context) => Semantics(
-    label: 'Loading',
-    child: SkeletonRegion(
+  Widget build(BuildContext context) {
+    Widget bar(double height, {double? width}) => SkeletonRegion(
       loading: true,
+      child: SizedBox(height: height, width: width ?? double.infinity),
+    );
+    return Semantics(
+      label: 'Loading entries',
       child: Column(
         children: [
           for (var i = 0; i < 3; i++)
             Padding(
-              padding: EdgeInsets.only(bottom: 12),
-              child: Panel(
-                child: Row(
-                  children: [
-                    Container(
-                      width: 44,
-                      height: 44,
-                      color: mhpColor(context, brandBorder),
+              padding: const EdgeInsets.symmetric(vertical: 14),
+              child: Row(
+                children: [
+                  bar(52, width: 58),
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        bar(16),
+                        const SizedBox(height: 8),
+                        FractionallySizedBox(widthFactor: .65, child: bar(12)),
+                      ],
                     ),
-                    SizedBox(width: 16),
-                    Expanded(
-                      child: Container(
-                        height: 16,
-                        color: mhpColor(context, brandBorder),
-                      ),
-                    ),
-                  ],
-                ),
+                  ),
+                  const SizedBox(width: 18),
+                  bar(18, width: 62),
+                  const SizedBox(width: 8),
+                  bar(18, width: 14),
+                ],
               ),
             ),
         ],
       ),
-    ),
-  );
+    );
+  }
 }
 
 String friendlyFailure(ApiFailure f) {

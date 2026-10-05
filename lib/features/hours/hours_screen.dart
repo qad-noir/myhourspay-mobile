@@ -90,6 +90,7 @@ class _HoursScreenState extends State<HoursScreen> with WidgetsBindingObserver {
     final shownPage = tab == 0 ? model.overviewData : model.page;
     final shownLoading = tab == 0 ? model.overviewLoading : model.loadingWeek;
     final shownFailure = tab == 0 ? model.overviewFailure : model.failure;
+    final hoursPending = tab == 1 && shownPage == null && shownFailure == null;
     final overviewPending =
         tab == 0 &&
         (model.overviewMonthly
@@ -170,7 +171,7 @@ class _HoursScreenState extends State<HoursScreen> with WidgetsBindingObserver {
                 top: false,
                 child: Padding(
                   padding: EdgeInsets.fromLTRB(22, 10, 22, 14),
-                  child: overviewPending
+                  child: (overviewPending || hoursPending)
                       ? const SkeletonRegion(
                           loading: true,
                           child: SizedBox(height: 52, width: double.infinity),
@@ -206,6 +207,8 @@ class _HoursScreenState extends State<HoursScreen> with WidgetsBindingObserver {
                       onAccount: () => selectTab(accountTab),
                       onEntry: (entry) => edit(entry: entry),
                     )
+                  : hoursPending
+                  ? const HoursSkeleton()
                   : overviewPending
                   ? const OverviewSkeleton(monthly: false)
                   : PageBody(

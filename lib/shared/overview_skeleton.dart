@@ -2,6 +2,66 @@ import 'package:flutter/material.dart';
 
 import 'widgets.dart';
 
+class HoursSkeleton extends StatelessWidget {
+  const HoursSkeleton({super.key});
+  @override
+  Widget build(BuildContext context) {
+    Widget bar(double height, {double? width}) => SkeletonRegion(
+      loading: true,
+      child: SizedBox(height: height, width: width ?? double.infinity),
+    );
+    return Semantics(
+      label: 'Loading hours',
+      child: SafeArea(
+        bottom: false,
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.fromLTRB(22, 16, 22, 24),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  bar(48, width: 180),
+                  const Spacer(),
+                  bar(38, width: 38),
+                ],
+              ),
+              const SizedBox(height: 24),
+              Row(
+                children: [
+                  Expanded(child: bar(34)),
+                  const SizedBox(width: 48),
+                  bar(28, width: 80),
+                ],
+              ),
+              const SizedBox(height: 8),
+              bar(18, width: 160),
+              const SizedBox(height: 16),
+              bar(36, width: 140),
+              const SizedBox(height: 16),
+              bar(8),
+              const SizedBox(height: 28),
+              bar(24, width: 110),
+              const SizedBox(height: 12),
+              const LoadingCards(),
+              const SizedBox(height: 16),
+              Row(
+                children: [
+                  bar(24, width: 24),
+                  const Spacer(),
+                  bar(20, width: 100),
+                  const Spacer(),
+                  bar(24, width: 24),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 /// A complete dashboard placeholder; no live values or actions appear midway
 /// through the first load. Sizes follow the dashboard's content sections.
 class OverviewSkeleton extends StatelessWidget {
