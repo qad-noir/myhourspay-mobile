@@ -8,6 +8,7 @@ import '../auth/auth_repository.dart';
 import '../auth/google_identity.dart';
 import '../hours/models.dart';
 import '../hours/repository.dart';
+import '../hours/monthly_overview_model.dart';
 
 enum SessionPhase {
   restoring,
@@ -25,10 +26,19 @@ class SessionModel extends ChangeNotifier {
     // Both repositories must share bearer state and the expiry callback.
     assert(identical(auth.api, hours.api));
     auth.api.onSessionFailure = _sessionFailure;
+    monthly = MonthlyOverviewModel(hours, _notify);
   }
   final AuthRepository auth;
   final HoursRepository hours;
   final SessionStore store;
+  late final MonthlyOverviewModel monthly;
+  bool overviewMonthly = true;
+  Future<void> setOverviewMonthly(bool value) async {
+    overviewMonthly = value;
+    _notify();
+    await ensureOverview();
+  }
+
   SessionPhase phase = SessionPhase.restoring;
   Account? account;
   List<Workspace> workspaces = [];
@@ -43,6 +53,8 @@ class SessionModel extends ChangeNotifier {
   bool loadingOverview = false;
   int _overviewGeneration = 0;
   StoredSession? _storedSession;
+  bool get googleLinked => _storedSession?.googleLinked == true;
+  bool _googleChallengeLinked = false;
   Future<void> _workspaceWrite = Future.value();
   int _pendingWorkspaceWrites = 0;
   DateTime get overviewWeek => weekStart(workspaceToday(workspace!.timezone));
@@ -200,7 +212,7 @@ class SessionModel extends ChangeNotifier {
         name: terms ? credential.name : null,
         terms: terms,
       );
-      if (current()) await _accept(result);
+      if (current()) await _accept(result, googleLinked: true);
     } on ApiFailure catch (error) {
       final safeCode = RegExp(r'^[a-z_]{1,64}$').hasMatch(error.code)
           ? error.code
@@ -265,7 +277,20 @@ class SessionModel extends ChangeNotifier {
       );
     }
     await auth.linkGoogle(challenge.id, credential.idToken, password);
-    if (current()) toast = 'Google linked successfully.';
+    if (current()) {
+      final saved = _storedSession;
+      if (saved != null) {
+        final linked = StoredSession(
+          saved.token,
+          saved.expiresAt,
+          workspaceId: saved.workspaceId,
+          googleLinked: true,
+        );
+        _storedSession = linked;
+        await store.write(linked);
+      }
+      toast = 'Google linked successfully.';
+    }
   });
   Future<bool> completeMfa(String code, bool recovery) => perform(() async {
     if (_challenge == null || !_challengeExpiry!.isAfter(DateTime.now())) {
@@ -275,22 +300,31 @@ class SessionModel extends ChangeNotifier {
         'The challenge expired. Sign in again.',
       );
     }
-    await _accept(await auth.mfa(_challenge!, code, recovery: recovery));
+    await _accept(
+      await auth.mfa(_challenge!, code, recovery: recovery),
+      googleLinked: _googleChallengeLinked,
+    );
   });
-  Future<bool> verify(String code) =>
-      perform(() async => _accept(await auth.verify(code)));
+  Future<bool> verify(String code) => perform(
+    () async => _accept(await auth.verify(code), googleLinked: googleLinked),
+  );
   Future<bool> resend() => perform(() async {
     await auth.resend();
     toast = 'Verification request processed. Check your email.';
   });
-  Future<void> _accept(AuthResult result) async {
+  Future<void> _accept(AuthResult result, {bool googleLinked = false}) async {
     if (result.status == 'two_factor_required') {
+      _googleChallengeLinked = googleLinked;
       _challenge = result.challengeToken;
       _challengeExpiry = result.expiresAt;
       phase = SessionPhase.twoFactorChallenge;
       return;
     }
-    final saved = StoredSession(result.accessToken!, result.expiresAt);
+    final saved = StoredSession(
+      result.accessToken!,
+      result.expiresAt,
+      googleLinked: googleLinked,
+    );
     // Persist the replacement atomically as one value, then enable normal requests.
     try {
       await store.write(saved);
@@ -313,6 +347,7 @@ class SessionModel extends ChangeNotifier {
     }
     auth.api.token = saved.token;
     _challenge = null;
+    _googleChallengeLinked = false;
     _challengeExpiry = null;
     _scheduleExpiry(saved.expiresAt);
     account = result.account;
@@ -403,6 +438,7 @@ class SessionModel extends ChangeNotifier {
               saved.token,
               saved.expiresAt,
               workspaceId: value.id,
+              googleLinked: saved.googleLinked,
             );
             await store.write(updated);
             if (auth.api.token == saved.token) _storedSession = updated;
@@ -421,6 +457,7 @@ class SessionModel extends ChangeNotifier {
   }
 
   void _resetOverview() {
+    monthly.suspend();
     ++_overviewGeneration;
     _overviewPage = null;
     _overviewLoadedWeek = null;
@@ -429,6 +466,10 @@ class SessionModel extends ChangeNotifier {
   }
 
   Future<void> ensureOverview() async {
+    if (overviewMonthly && workspace != null && account != null) {
+      await monthly.ensure(account!.id, workspace!);
+      return;
+    }
     if (workspace != null && overviewData == null && !loadingOverview) {
       await reloadOverview();
     }
@@ -567,7 +608,10 @@ class SessionModel extends ChangeNotifier {
   Future<void> _clear(SessionPhase next) async {
     ++_generation;
     _resetOverview();
+    monthly.clear();
+    overviewMonthly = true;
     _storedSession = null;
+    _googleChallengeLinked = false;
     sessionRevision++;
     _expiry?.cancel();
     auth.api.token = null;
@@ -636,6 +680,7 @@ class SessionModel extends ChangeNotifier {
   @override
   void dispose() {
     _disposed = true;
+    monthly.clear();
     _expiry?.cancel();
     auth.api.onSessionFailure = null;
     auth.api.close();

@@ -15,6 +15,7 @@ import 'package:myhourspay/features/hours/models.dart';
 import 'package:myhourspay/features/hours/repository.dart';
 import 'package:myhourspay/features/session/session_model.dart';
 import 'package:myhourspay/shared/widgets.dart';
+import 'package:myhourspay/shared/hours_widgets.dart';
 import 'package:timezone/data/latest.dart' as tz;
 
 import 'support/fixtures.dart';
@@ -29,6 +30,7 @@ SessionModel createModel(MockClient transport) {
     HoursRepository(api),
     MemorySessionStore(),
   );
+  model.overviewMonthly = false;
   model.auth.api.token = 'test-token';
   model.account = Account.fromJson(user);
   model.workspace = Workspace.fromJson(workspace);
@@ -122,12 +124,32 @@ void main() {
       final model = createModel(
         MockClient((_) async => response(hoursPage([]))),
       );
+      model.week = model.overviewWeek;
+      final monday = model.week;
+      final wednesday = DateTime(monday.year, monday.month, monday.day + 2);
+      final thursday = DateTime(monday.year, monday.month, monday.day + 3);
+      model.page = HoursPage.fromJson(
+        hoursPage([
+          entry(date: dateKey(monday)),
+          entry(id: 2, date: dateKey(wednesday)),
+        ]),
+      );
       addTearDown(model.dispose);
       await tester.pumpWidget(shell(HoursScreen(model: model)));
       await tester.pumpAndSettle();
       expect(
-        tester.getTopLeft(find.text('30 Sep')).dy,
-        lessThan(tester.getTopLeft(find.text('28 Sep')).dy),
+        tester
+            .getTopLeft(
+              find.text('${wednesday.day} ${months[wednesday.month - 1]}'),
+            )
+            .dy,
+        lessThan(
+          tester
+              .getTopLeft(
+                find.text('${monday.day} ${months[monday.month - 1]}'),
+              )
+              .dy,
+        ),
       );
       await tester.tap(find.text('Wed'));
       await tester.pumpAndSettle();
@@ -136,7 +158,10 @@ void main() {
       await tester.pumpAndSettle();
       await tester.tap(find.text('Thu'));
       await tester.pumpAndSettle();
-      expect(find.text('Thursday, 1 Oct'), findsOneWidget);
+      expect(
+        find.text('Thursday, ${thursday.day} ${months[thursday.month - 1]}'),
+        findsOneWidget,
+      );
       expect(find.text('Save hours'), findsOneWidget);
     },
   );

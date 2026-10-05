@@ -136,6 +136,8 @@ void main() {
       await tester.tap(find.text('Test workspace'));
       await tester.tap(find.text('Continue'));
       await tester.pumpAndSettle();
+      await tester.tap(find.text('Week'));
+      await tester.pumpAndSettle();
       await capture('native-week');
       expect(find.text('0h 0m'), findsOneWidget);
       await tester.scrollUntilVisible(find.text('Add hours'), 300);

@@ -8,6 +8,7 @@ import '../timesheets/timesheet_screen.dart';
 import 'models.dart';
 import 'edit_hours_screen.dart';
 import 'week_calendar.dart';
+import 'monthly_overview_view.dart';
 
 class HoursScreen extends StatefulWidget {
   const HoursScreen({super.key, required this.model, this.initialTab = 0});
@@ -24,6 +25,9 @@ class _HoursScreenState extends State<HoursScreen> with WidgetsBindingObserver {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    if (model.workspace != null && model.account != null) {
+      model.monthly.bind(model.account!.id, model.workspace!);
+    }
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted && tab == 0) model.ensureOverview();
     });
@@ -60,6 +64,9 @@ class _HoursScreenState extends State<HoursScreen> with WidgetsBindingObserver {
       await model.reload();
       if (model.workspace != null && model.week != model.overviewWeek) {
         await model.reloadOverview();
+      }
+      if (model.workspace != null && model.account != null) {
+        await model.monthly.afterMutation(model.account!.id, model.workspace!);
       }
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -151,10 +158,20 @@ class _HoursScreenState extends State<HoursScreen> with WidgetsBindingObserver {
                 child: Padding(
                   padding: const EdgeInsets.fromLTRB(22, 10, 22, 14),
                   child: FilledButton.icon(
-                    onPressed: w.writable && !shownLoading
+                    onPressed:
+                        w.writable &&
+                            !shownLoading &&
+                            (tab != 0 ||
+                                !model.overviewMonthly ||
+                                (model.monthly.totals != null &&
+                                    !model.monthly.loadingCalendar &&
+                                    model.monthly.calendarFailure == null))
                         ? () => edit(
                             initialDate: tab == 0
-                                ? workspaceToday(w.timezone)
+                                ? model.overviewMonthly &&
+                                          model.monthly.selectedEntry == null
+                                      ? model.monthly.selectedDate
+                                      : workspaceToday(w.timezone)
                                 : null,
                           )
                         : null,
@@ -163,237 +180,248 @@ class _HoursScreenState extends State<HoursScreen> with WidgetsBindingObserver {
                   ),
                 ),
               ),
-              body: PageBody(
-                children: [
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Align(
-                          alignment: Alignment.centerLeft,
-                          child: OutlinedButton(
-                            onPressed: model.switchWorkspace,
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                const Icon(
-                                  Icons.business_outlined,
-                                  size: 19,
-                                  color: brandInk,
-                                ),
-                                const SizedBox(width: 10),
-                                Flexible(
-                                  child: Text(
-                                    w.name,
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: const TextStyle(
-                                      color: brandInk,
-                                      fontSize: 13,
-                                    ),
+              body: tab == 0 && model.overviewMonthly
+                  ? MonthlyOverviewView(
+                      model: model,
+                      onAccount: () => selectTab(accountTab),
+                      onEntry: (entry) => edit(entry: entry),
+                    )
+                  : PageBody(
+                      children: [
+                        Row(
+                          children: [
+                            Expanded(
+                              child: Align(
+                                alignment: Alignment.centerLeft,
+                                child: OutlinedButton(
+                                  onPressed: model.switchWorkspace,
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      const Icon(
+                                        Icons.business_outlined,
+                                        size: 19,
+                                        color: brandInk,
+                                      ),
+                                      const SizedBox(width: 10),
+                                      Flexible(
+                                        child: Text(
+                                          w.name,
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                          style: const TextStyle(
+                                            color: brandInk,
+                                            fontSize: 13,
+                                          ),
+                                        ),
+                                      ),
+                                      const SizedBox(width: 14),
+                                      const Icon(
+                                        Icons.expand_more,
+                                        size: 19,
+                                        color: brandInk,
+                                      ),
+                                    ],
                                   ),
                                 ),
-                                const SizedBox(width: 14),
-                                const Icon(
-                                  Icons.expand_more,
-                                  size: 19,
-                                  color: brandInk,
-                                ),
-                              ],
+                              ),
                             ),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 24),
-                      IconButton(
-                        tooltip: 'Account and devices',
-                        onPressed: () => setState(() => tab = accountTab),
-                        icon: InitialAvatar(
-                          model.account?.name ?? '',
-                          size: 38,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 22),
-                  Text(
-                    'Hello, ${model.account?.name.split(' ').first ?? ''}',
-                    style: const TextStyle(color: brandMuted),
-                  ),
-                  const SizedBox(height: 3),
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              tab == 1 ? 'Your hours' : 'Your week',
-                              style: titleStyle,
-                            ),
-                            const SizedBox(height: 3),
-                            Text(
-                              weekLabel(shownWeek),
-                              style: const TextStyle(
-                                color: brandMuted,
-                                fontSize: 15,
+                            const SizedBox(width: 24),
+                            IconButton(
+                              tooltip: 'Account and devices',
+                              onPressed: () => setState(() => tab = accountTab),
+                              icon: InitialAvatar(
+                                model.account?.name ?? '',
+                                size: 38,
                               ),
                             ),
                           ],
                         ),
-                      ),
-                      if (shownPage != null)
-                        Flexible(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.end,
-                            children: [
-                              Text(
-                                durationLabel(shownPage.totalMinutes),
-                                style: titleStyle.copyWith(fontSize: 24),
-                              ),
-                              if (w.targetMinutes > 0)
-                                Text(
-                                  'of ${durationLabel(w.targetMinutes)} target',
-                                  style: const TextStyle(
-                                    color: brandMuted,
-                                    fontSize: 12,
+                        const SizedBox(height: 22),
+                        if (tab == 0) ...[
+                          OverviewPeriodSwitch(model: model),
+                          const SizedBox(height: 14),
+                        ],
+                        Text(
+                          'Hello, ${model.account?.name.split(' ').first ?? ''}',
+                          style: const TextStyle(color: brandMuted),
+                        ),
+                        const SizedBox(height: 3),
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    tab == 1 ? 'Your hours' : 'Your week',
+                                    style: titleStyle,
                                   ),
+                                  const SizedBox(height: 3),
+                                  Text(
+                                    weekLabel(shownWeek),
+                                    style: const TextStyle(
+                                      color: brandMuted,
+                                      fontSize: 15,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            if (shownPage != null)
+                              Flexible(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.end,
+                                  children: [
+                                    Text(
+                                      durationLabel(shownPage.totalMinutes),
+                                      style: titleStyle.copyWith(fontSize: 24),
+                                    ),
+                                    if (w.targetMinutes > 0)
+                                      Text(
+                                        'of ${durationLabel(w.targetMinutes)} target',
+                                        style: const TextStyle(
+                                          color: brandMuted,
+                                          fontSize: 12,
+                                        ),
+                                      ),
+                                  ],
+                                ),
+                              ),
+                          ],
+                        ),
+                        if (tab == 1)
+                          Align(
+                            alignment: Alignment.centerLeft,
+                            child: TextButton.icon(
+                              onPressed: shownLoading
+                                  ? null
+                                  : () async {
+                                      final date = await selectHoursDate(
+                                        context,
+                                        model,
+                                      );
+                                      if (date != null && mounted) {
+                                        await model.selectWeek(date);
+                                      }
+                                    },
+                              icon: const Icon(Icons.calendar_month_outlined),
+                              label: const Text('Choose a date'),
+                            ),
+                          ),
+                        const SizedBox(height: 16),
+                        if (shownPage != null && w.targetMinutes > 0)
+                          LinearProgressIndicator(
+                            value: (shownPage.totalMinutes / w.targetMinutes)
+                                .clamp(0, 1),
+                            minHeight: 8,
+                            borderRadius: BorderRadius.circular(8),
+                            color: brandOrange,
+                            backgroundColor: const Color(0xffeeece9),
+                          ),
+                        if (!w.writable)
+                          const Notice(
+                            'This workspace is read-only. You can view your hours.',
+                          ),
+                        ErrorNotice(shownFailure),
+                        if (shownLoading)
+                          const Padding(
+                            padding: EdgeInsets.only(top: 24),
+                            child: LoadingCards(),
+                          )
+                        else if (shownPage != null) ...[
+                          if (tab == 0) ...[
+                            const SizedBox(height: 32),
+                            WeekChart(
+                              week: shownWeek,
+                              entries: shownPage.entries,
+                              onDayTap: w.writable
+                                  ? (day) => edit(
+                                      initialDate: day,
+                                      entry: shownPage.entries
+                                          .where(
+                                            (e) =>
+                                                dateKey(e.date) == dateKey(day),
+                                          )
+                                          .firstOrNull,
+                                    )
+                                  : null,
+                            ),
+                            const SizedBox(height: 22),
+                          ],
+                          Row(
+                            children: [
+                              Expanded(
+                                child: Text(
+                                  tab == 0 ? 'Recent entries' : 'This week',
+                                  style: const TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                              ),
+                              if (tab == 0)
+                                TextButton(
+                                  onPressed: () {
+                                    selectTab(1);
+                                    if (model.week != model.overviewWeek) {
+                                      model.selectWeek(model.overviewWeek);
+                                    }
+                                  },
+                                  child: const Text('See all'),
                                 ),
                             ],
                           ),
-                        ),
-                    ],
-                  ),
-                  if (tab == 1)
-                    Align(
-                      alignment: Alignment.centerLeft,
-                      child: TextButton.icon(
-                        onPressed: shownLoading
-                            ? null
-                            : () async {
-                                final date = await selectHoursDate(
-                                  context,
-                                  model,
-                                );
-                                if (date != null && mounted) {
-                                  await model.selectWeek(date);
-                                }
-                              },
-                        icon: const Icon(Icons.calendar_month_outlined),
-                        label: const Text('Choose a date'),
-                      ),
-                    ),
-                  const SizedBox(height: 16),
-                  if (shownPage != null && w.targetMinutes > 0)
-                    LinearProgressIndicator(
-                      value: (shownPage.totalMinutes / w.targetMinutes).clamp(
-                        0,
-                        1,
-                      ),
-                      minHeight: 8,
-                      borderRadius: BorderRadius.circular(8),
-                      color: brandOrange,
-                      backgroundColor: const Color(0xffeeece9),
-                    ),
-                  if (!w.writable)
-                    const Notice(
-                      'This workspace is read-only. You can view your hours.',
-                    ),
-                  ErrorNotice(shownFailure),
-                  if (shownLoading)
-                    const Padding(
-                      padding: EdgeInsets.only(top: 24),
-                      child: LoadingCards(),
-                    )
-                  else if (shownPage != null) ...[
-                    if (tab == 0) ...[
-                      const SizedBox(height: 32),
-                      WeekChart(
-                        week: shownWeek,
-                        entries: shownPage.entries,
-                        onDayTap: w.writable
-                            ? (day) => edit(
-                                initialDate: day,
-                                entry: shownPage.entries
-                                    .where(
-                                      (e) => dateKey(e.date) == dateKey(day),
-                                    )
-                                    .firstOrNull,
-                              )
-                            : null,
-                      ),
-                      const SizedBox(height: 22),
-                    ],
-                    Row(
-                      children: [
-                        Expanded(
-                          child: Text(
-                            tab == 0 ? 'Recent entries' : 'This week',
-                            style: const TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w700,
+                          if (shownPage.entries.isEmpty)
+                            const Padding(
+                              padding: EdgeInsets.symmetric(vertical: 24),
+                              child: InfoPanel(
+                                'No hours this week. Add your first working day.',
+                              ),
                             ),
-                          ),
-                        ),
-                        if (tab == 0)
-                          TextButton(
-                            onPressed: () {
-                              selectTab(1);
-                              if (model.week != model.overviewWeek) {
-                                model.selectWeek(model.overviewWeek);
-                              }
-                            },
-                            child: const Text('See all'),
+                          for (final e
+                              in (tab == 0
+                                  ? recent.take(3)
+                                  : shownPage.entries)) ...[
+                            EntryRow(
+                              entry: e,
+                              onTap: w.writable ? () => edit(entry: e) : null,
+                            ),
+                            const Divider(),
+                          ],
+                        ],
+                        if (tab == 1 || shownFailure != null)
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              IconButton(
+                                tooltip: 'Previous week',
+                                onPressed: shownLoading || tab == 0
+                                    ? null
+                                    : () => model.moveWeek(-7),
+                                icon: const Icon(Icons.chevron_left),
+                              ),
+                              TextButton.icon(
+                                onPressed: shownLoading
+                                    ? null
+                                    : tab == 0
+                                    ? model.reloadOverview
+                                    : model.reload,
+                                icon: const Icon(Icons.refresh, size: 18),
+                                label: const Text('Refresh'),
+                              ),
+                              IconButton(
+                                tooltip: 'Next week',
+                                onPressed: shownLoading || tab == 0
+                                    ? null
+                                    : () => model.moveWeek(7),
+                                icon: const Icon(Icons.chevron_right),
+                              ),
+                            ],
                           ),
                       ],
                     ),
-                    if (shownPage.entries.isEmpty)
-                      const Padding(
-                        padding: EdgeInsets.symmetric(vertical: 24),
-                        child: InfoPanel(
-                          'No hours this week. Add your first working day.',
-                        ),
-                      ),
-                    for (final e
-                        in (tab == 0 ? recent.take(3) : shownPage.entries)) ...[
-                      EntryRow(
-                        entry: e,
-                        onTap: w.writable ? () => edit(entry: e) : null,
-                      ),
-                      const Divider(),
-                    ],
-                  ],
-                  if (tab == 1 || shownFailure != null)
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        IconButton(
-                          tooltip: 'Previous week',
-                          onPressed: shownLoading || tab == 0
-                              ? null
-                              : () => model.moveWeek(-7),
-                          icon: const Icon(Icons.chevron_left),
-                        ),
-                        TextButton.icon(
-                          onPressed: shownLoading
-                              ? null
-                              : tab == 0
-                              ? model.reloadOverview
-                              : model.reload,
-                          icon: const Icon(Icons.refresh, size: 18),
-                          label: const Text('Refresh'),
-                        ),
-                        IconButton(
-                          tooltip: 'Next week',
-                          onPressed: shownLoading || tab == 0
-                              ? null
-                              : () => model.moveWeek(7),
-                          icon: const Icon(Icons.chevron_right),
-                        ),
-                      ],
-                    ),
-                ],
-              ),
             ),
     );
   }

@@ -113,6 +113,7 @@ SessionModel visualModel({bool longNames = false}) {
       HoursRepository(api),
       MemorySessionStore(),
     )
+    ..overviewMonthly = false
     ..account = Account.fromJson(u)
     ..workspaces = [
       Workspace.fromJson(w),

@@ -70,9 +70,29 @@ class HoursPage {
           .toList(),
       totalMinutes = json['summary']['total_minutes'] as int,
       overtimeMinutes = json['summary']['overtime_minutes'] as int,
-      lastPage = json['meta']['last_page'] as int;
+      lastPage = json['meta']['last_page'] as int,
+      weeks = (json['summary']['weeks'] as List)
+          .map((e) => HoursWeek.fromJson(e as Json))
+          .toList();
   final List<HoursEntry> entries;
   final int totalMinutes, overtimeMinutes, lastPage;
+  final List<HoursWeek> weeks;
+}
+
+class HoursWeek {
+  HoursWeek({
+    required this.start,
+    required this.minutes,
+    required this.targetMinutes,
+  });
+  HoursWeek.fromJson(Json json)
+    : start = DateTime.parse(json['start'] as String),
+      minutes = json['minutes'] as int,
+      targetMinutes = json['target_minutes'] as int?;
+  final DateTime start;
+  final int minutes;
+  final int? targetMinutes;
+  int? get variance => targetMinutes == null ? null : minutes - targetMinutes!;
 }
 
 class HoursDraft {

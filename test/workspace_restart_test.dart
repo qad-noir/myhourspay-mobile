@@ -118,6 +118,7 @@ void main() {
       final model = makeModel(
         MemorySessionStore()..value = saved(workspaceId: 2),
       );
+      model.overviewMonthly = false;
       await model.restore();
       final current = model.overviewWeek;
       final historical = current.subtract(const Duration(days: 14));

@@ -8,6 +8,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:http/testing.dart';
 import 'package:myhourspay/core/api_client.dart';
 import 'package:myhourspay/core/api_environment.dart';
+import 'package:myhourspay/core/session_store.dart';
 import 'package:myhourspay/features/auth/auth_repository.dart';
 import 'package:myhourspay/features/auth/google_identity.dart';
 import 'package:myhourspay/features/hours/repository.dart';
@@ -45,6 +46,40 @@ dynamic challengeResponse([int number = 1]) => response({
 }, 201);
 
 void main() {
+  test(
+    'Google linkage survives secure session serialization and app restore',
+    () async {
+      final saved = StoredSession.decode(
+        StoredSession(
+          'fixture-token',
+          DateTime.now().add(const Duration(hours: 1)),
+          googleLinked: true,
+        ).encode(),
+      );
+      final store = MemorySessionStore()..value = saved;
+      final model = createModel(
+        MockClient((request) async {
+          if (request.url.path.endsWith('/me')) return response({'data': user});
+          if (request.url.path.endsWith('/workspaces')) {
+            return response({
+              'data': [workspace],
+            });
+          }
+          throw StateError('Unexpected route');
+        }),
+        store,
+      );
+      addTearDown(model.dispose);
+      await model.restore();
+      expect(model.googleLinked, true);
+      expect(
+        StoredSession.decode(
+          '{"access_token":"old","expires_at":"2099-01-01T00:00:00Z"}',
+        ).googleLinked,
+        false,
+      );
+    },
+  );
   testWidgets(
     'Android channel receives a distinct unchanged nonce per invocation',
     (tester) async {
@@ -197,7 +232,9 @@ void main() {
     }
 
     expect(await model.googleSignIn(acquire, () async => 'Android'), true);
+    expect(model.googleLinked, true);
     await model.logout();
+    expect(model.googleLinked, false);
     expect(model.phase, SessionPhase.signedOut);
     expect(await model.googleSignIn(acquire, () async => 'Android'), true);
     expect(challenges, 2);

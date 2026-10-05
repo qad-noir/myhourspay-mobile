@@ -245,7 +245,9 @@ class _AccountScreenState extends State<AccountScreen> {
             ),
           ),
           const SizedBox(height: 28),
-          if (google.configured && widget.model.providers['google'] == true)
+          if (google.configured &&
+              widget.model.providers['google'] == true &&
+              !widget.model.googleLinked)
             OutlinedButton.icon(
               onPressed: widget.model.busy ? null : linkGoogle,
               icon: const Icon(Icons.link),

@@ -1,14 +1,21 @@
 import 'dart:convert';
 
 class StoredSession {
-  const StoredSession(this.token, this.expiresAt, {this.workspaceId});
+  const StoredSession(
+    this.token,
+    this.expiresAt, {
+    this.workspaceId,
+    this.googleLinked = false,
+  });
   final String token;
   final DateTime expiresAt;
   final int? workspaceId;
+  final bool googleLinked;
   String encode() => jsonEncode({
     'access_token': token,
     'expires_at': expiresAt.toUtc().toIso8601String(),
     if (workspaceId != null) 'workspace_id': workspaceId,
+    'google_linked': googleLinked,
   });
   factory StoredSession.decode(String value) {
     final json = jsonDecode(value) as Map<String, dynamic>;
@@ -18,6 +25,7 @@ class StoredSession {
       workspaceId: json['workspace_id'] is int && json['workspace_id'] > 0
           ? json['workspace_id'] as int
           : null,
+      googleLinked: json['google_linked'] == true,
     );
   }
 }
