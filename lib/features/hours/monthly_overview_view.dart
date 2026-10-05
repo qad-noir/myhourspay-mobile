@@ -80,8 +80,10 @@ class MonthlyOverviewView extends StatelessWidget {
     required this.model,
     required this.onAccount,
     required this.onEntry,
+    this.initialLoading = true,
   });
   final SessionModel model;
+  final bool initialLoading;
   final VoidCallback onAccount;
   final ValueChanged<HoursEntry> onEntry;
   MonthlyOverviewModel get state => model.monthly;
@@ -106,7 +108,7 @@ class MonthlyOverviewView extends StatelessWidget {
     final awaitingCalendar = totals == null && state.calendarFailure == null;
     final awaitingWeeks =
         state.overtimeMinutes == null && state.weeksFailure == null;
-    if (awaitingCalendar || awaitingWeeks) {
+    if (initialLoading && (awaitingCalendar || awaitingWeeks)) {
       return OverviewSkeleton(
         monthly: true,
         calendarRows: monthCells(month).length ~/ 7,
@@ -249,265 +251,274 @@ class MonthlyOverviewView extends StatelessWidget {
                     ),
                   ),
                 ),
-              LayoutBuilder(
-                builder: (context, c) {
-                  final cards = [
-                    _MetricCard(
-                      loading: awaitingCalendar,
-                      label: 'Hours logged',
-                      value: totals == null
-                          ? 'Unavailable'
-                          : compactHours(totals.totalMinutes),
-                      detail: totals == null
-                          ? 'Refresh to load month hours'
-                          : '${totals.workedDays} ${totals.workedDays == 1 ? 'worked day' : 'worked days'}',
-                      icon: Icons.schedule,
-                      color: Color(0xfffff0e5),
-                      ink: mhpColor(context, brandInk),
-                    ),
-                    _MetricCard(
-                      loading: awaitingWeeks,
-                      label: 'Overtime',
-                      value: state.overtimeMinutes == null
-                          ? 'Unavailable'
-                          : '+${compactHours(state.overtimeMinutes!)}',
-                      detail: 'Across full weeks',
-                      icon: Icons.bar_chart,
-                      color: brandGreen,
-                      ink: mhpColor(context, overtimeInk),
-                    ),
-                  ];
-                  if (MediaQuery.textScalerOf(context).scale(1) > 1.35 ||
-                      c.maxWidth < 300) {
-                    return Column(
-                      children: [cards[0], SizedBox(height: 10), cards[1]],
+              if (awaitingCalendar || awaitingWeeks)
+                OverviewSkeleton(
+                  monthly: true,
+                  contentOnly: true,
+                  calendarRows: monthCells(month).length ~/ 7,
+                )
+              else ...[
+                LayoutBuilder(
+                  builder: (context, c) {
+                    final cards = [
+                      _MetricCard(
+                        loading: awaitingCalendar,
+                        label: 'Hours logged',
+                        value: totals == null
+                            ? 'Unavailable'
+                            : compactHours(totals.totalMinutes),
+                        detail: totals == null
+                            ? 'Refresh to load month hours'
+                            : '${totals.workedDays} ${totals.workedDays == 1 ? 'worked day' : 'worked days'}',
+                        icon: Icons.schedule,
+                        color: Color(0xfffff0e5),
+                        ink: mhpColor(context, brandInk),
+                      ),
+                      _MetricCard(
+                        loading: awaitingWeeks,
+                        label: 'Overtime',
+                        value: state.overtimeMinutes == null
+                            ? 'Unavailable'
+                            : '+${compactHours(state.overtimeMinutes!)}',
+                        detail: 'Across full weeks',
+                        icon: Icons.bar_chart,
+                        color: brandGreen,
+                        ink: mhpColor(context, overtimeInk),
+                      ),
+                    ];
+                    if (MediaQuery.textScalerOf(context).scale(1) > 1.35 ||
+                        c.maxWidth < 300) {
+                      return Column(
+                        children: [cards[0], SizedBox(height: 10), cards[1]],
+                      );
+                    }
+                    return Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(child: cards[0]),
+                        SizedBox(width: 12),
+                        Expanded(child: cards[1]),
+                      ],
                     );
-                  }
-                  return Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+                  },
+                ),
+                SizedBox(height: 12),
+                _Card(
+                  loading: awaitingCalendar || awaitingWeeks,
+                  child: Wrap(
+                    alignment: WrapAlignment.spaceBetween,
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    spacing: 20,
+                    runSpacing: 8,
                     children: [
-                      Expanded(child: cards[0]),
-                      SizedBox(width: 12),
-                      Expanded(child: cards[1]),
-                    ],
-                  );
-                },
-              ),
-              SizedBox(height: 12),
-              _Card(
-                loading: awaitingCalendar || awaitingWeeks,
-                child: Wrap(
-                  alignment: WrapAlignment.spaceBetween,
-                  crossAxisAlignment: WrapCrossAlignment.center,
-                  spacing: 20,
-                  runSpacing: 8,
-                  children: [
-                    Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(Icons.bar_chart, size: 19),
-                        SizedBox(width: 10),
-                        Text('Daily average'),
-                      ],
-                    ),
-                    Text(
-                      totals == null
-                          ? 'Unavailable'
-                          : durationLabel(totals.averageMinutes),
-                      style: TextStyle(fontWeight: FontWeight.w700),
-                    ),
-                  ],
-                ),
-              ),
-              SizedBox(height: 14),
-              _Card(
-                loading: awaitingCalendar || awaitingWeeks,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    Text('Month at a glance', style: _sectionStyle),
-                    SizedBox(height: 12),
-                    MonthCalendar(
-                      month: month,
-                      today: workspaceToday(workspace.timezone),
-                      selected: selected,
-                      entries: totals?.entries ?? [],
-                      available: calendarReady,
-                      onSelect: calendarReady ? state.selectDay : null,
-                    ),
-                    if (totals?.entries.isEmpty == true)
-                      Padding(
-                        padding: EdgeInsets.only(top: 12),
-                        child: Text(
-                          'No hours logged this month. Select a date to add hours.',
-                          style: TextStyle(
-                            color: mhpColor(context, brandMuted),
-                            fontSize: 13,
-                          ),
-                        ),
-                      ),
-                  ],
-                ),
-              ),
-              SizedBox(height: 12),
-              _Card(
-                loading: awaitingCalendar || awaitingWeeks,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    Wrap(
-                      alignment: WrapAlignment.spaceBetween,
-                      spacing: 16,
-                      runSpacing: 5,
-                      children: [
-                        Text(
-                          '${shortDays[selected.weekday - 1]}, ${shortDate(selected)}',
-                          style: TextStyle(fontWeight: FontWeight.w700),
-                        ),
-                        if (entry != null)
-                          Text(
-                            durationLabel(entry.netMinutes),
-                            style: TextStyle(fontWeight: FontWeight.w700),
-                          ),
-                      ],
-                    ),
-                    if (entry != null) ...[
-                      Text(
-                        '${entry.start}–${entry.end} · ${entry.breakMinutes}m ${entry.paidBreak ? 'paid' : 'unpaid'} break',
-                        style: TextStyle(
-                          fontSize: 13,
-                          color: mhpColor(context, brandMuted),
-                        ),
-                      ),
-                      Align(
-                        alignment: Alignment.centerRight,
-                        child: TextButton.icon(
-                          onPressed: () => onEntry(entry),
-                          icon: Icon(Icons.chevron_right, size: 18),
-                          label: Text('View entry'),
-                        ),
-                      ),
-                    ] else
-                      Padding(
-                        padding: EdgeInsets.only(top: 6),
-                        child: Text(
-                          calendarReady
-                              ? (workspace.writable
-                                    ? 'No recorded entry. Use Add hours below for this date.'
-                                    : 'No recorded entry. This workspace is read-only.')
-                              : 'Entry dates are unavailable. Refresh before adding hours.',
-                          style: TextStyle(
-                            color: mhpColor(context, brandMuted),
-                            fontSize: 13,
-                          ),
-                        ),
-                      ),
-                  ],
-                ),
-              ),
-              SizedBox(height: 16),
-              _Card(
-                loading: awaitingCalendar || awaitingWeeks,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    Text('Weekly breakdown', style: _sectionStyle),
-                    SizedBox(height: 4),
-                    Text(
-                      workspace.targetMinutes > 0
-                          ? '${compactHours(workspace.targetMinutes)} weekly target'
-                          : 'Weekly target not set',
-                      style: TextStyle(
-                        color: mhpColor(context, brandMuted),
-                        fontSize: 13,
-                      ),
-                    ),
-                    if (state.snapshot?.fullWeeks == null && !awaitingWeeks)
-                      Padding(
-                        padding: EdgeInsets.symmetric(vertical: 16),
-                        child: Text(
-                          'Weekly totals unavailable. Refresh to load them.',
-                        ),
-                      ),
-                    for (var i = 0; i < weekRows.length; i++) ...[
-                      if (i > 0) Divider(),
-                      WeeklyBreakdownRow(
-                        week: weekRows[i],
-                        scaleMinutes: weekRows.fold<int>(0, (largest, week) {
-                          final value = week.minutes > (week.targetMinutes ?? 0)
-                              ? week.minutes
-                              : (week.targetMinutes ?? 0);
-                          return value > largest ? value : largest;
-                        }),
-                      ),
-                    ],
-                  ],
-                ),
-              ),
-              SizedBox(height: 12),
-              _Card(
-                color: Color(0xfffff0e5),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Icon(
-                      Icons.info_outline,
-                      color: mhpColor(context, brandAction),
-                      size: 22,
-                    ),
-                    SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
                         children: [
-                          Text(
-                            'How overtime is counted',
-                            style: TextStyle(fontWeight: FontWeight.w700),
-                          ),
-                          SizedBox(height: 4),
-                          Text(
-                            'Overtime is positive weekly excess across full weeks touching this month, including days outside the month.',
+                          Icon(Icons.bar_chart, size: 19),
+                          SizedBox(width: 10),
+                          Text('Daily average'),
+                        ],
+                      ),
+                      Text(
+                        totals == null
+                            ? 'Unavailable'
+                            : durationLabel(totals.averageMinutes),
+                        style: TextStyle(fontWeight: FontWeight.w700),
+                      ),
+                    ],
+                  ),
+                ),
+                SizedBox(height: 14),
+                _Card(
+                  loading: awaitingCalendar || awaitingWeeks,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Text('Month at a glance', style: _sectionStyle),
+                      SizedBox(height: 12),
+                      MonthCalendar(
+                        month: month,
+                        today: workspaceToday(workspace.timezone),
+                        selected: selected,
+                        entries: totals?.entries ?? [],
+                        available: calendarReady,
+                        onSelect: calendarReady ? state.selectDay : null,
+                      ),
+                      if (totals?.entries.isEmpty == true)
+                        Padding(
+                          padding: EdgeInsets.only(top: 12),
+                          child: Text(
+                            'No hours logged this month. Select a date to add hours.',
                             style: TextStyle(
                               color: mhpColor(context, brandMuted),
                               fontSize: 13,
-                              height: 1.5,
                             ),
                           ),
+                        ),
+                    ],
+                  ),
+                ),
+                SizedBox(height: 12),
+                _Card(
+                  loading: awaitingCalendar || awaitingWeeks,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Wrap(
+                        alignment: WrapAlignment.spaceBetween,
+                        spacing: 16,
+                        runSpacing: 5,
+                        children: [
+                          Text(
+                            '${shortDays[selected.weekday - 1]}, ${shortDate(selected)}',
+                            style: TextStyle(fontWeight: FontWeight.w700),
+                          ),
+                          if (entry != null)
+                            Text(
+                              durationLabel(entry.netMinutes),
+                              style: TextStyle(fontWeight: FontWeight.w700),
+                            ),
                         ],
                       ),
-                    ),
-                  ],
+                      if (entry != null) ...[
+                        Text(
+                          '${entry.start}–${entry.end} · ${entry.breakMinutes}m ${entry.paidBreak ? 'paid' : 'unpaid'} break',
+                          style: TextStyle(
+                            fontSize: 13,
+                            color: mhpColor(context, brandMuted),
+                          ),
+                        ),
+                        Align(
+                          alignment: Alignment.centerRight,
+                          child: TextButton.icon(
+                            onPressed: () => onEntry(entry),
+                            icon: Icon(Icons.chevron_right, size: 18),
+                            label: Text('View entry'),
+                          ),
+                        ),
+                      ] else
+                        Padding(
+                          padding: EdgeInsets.only(top: 6),
+                          child: Text(
+                            calendarReady
+                                ? (workspace.writable
+                                      ? 'No recorded entry. Use Add hours below for this date.'
+                                      : 'No recorded entry. This workspace is read-only.')
+                                : 'Entry dates are unavailable. Refresh before adding hours.',
+                            style: TextStyle(
+                              color: mhpColor(context, brandMuted),
+                              fontSize: 13,
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
                 ),
-              ),
-              SizedBox(height: 14),
-              _Card(
-                loading: awaitingCalendar || awaitingWeeks,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    Text('Monthly breaks', style: _sectionStyle),
-                    SizedBox(height: 8),
-                    _BreakRow(
-                      'Breaks recorded',
-                      totals == null ? 'Unavailable' : '${totals.breakCount}',
-                    ),
-                    Divider(),
-                    _BreakRow(
-                      'Paid breaks included',
-                      totals == null
-                          ? 'Unavailable'
-                          : compactHours(totals.paidMinutes),
-                    ),
-                    Divider(),
-                    _BreakRow(
-                      'Unpaid breaks deducted',
-                      totals == null
-                          ? 'Unavailable'
-                          : compactHours(totals.unpaidMinutes),
-                    ),
-                  ],
+                SizedBox(height: 16),
+                _Card(
+                  loading: awaitingCalendar || awaitingWeeks,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Text('Weekly breakdown', style: _sectionStyle),
+                      SizedBox(height: 4),
+                      Text(
+                        workspace.targetMinutes > 0
+                            ? '${compactHours(workspace.targetMinutes)} weekly target'
+                            : 'Weekly target not set',
+                        style: TextStyle(
+                          color: mhpColor(context, brandMuted),
+                          fontSize: 13,
+                        ),
+                      ),
+                      if (state.snapshot?.fullWeeks == null && !awaitingWeeks)
+                        Padding(
+                          padding: EdgeInsets.symmetric(vertical: 16),
+                          child: Text(
+                            'Weekly totals unavailable. Refresh to load them.',
+                          ),
+                        ),
+                      for (var i = 0; i < weekRows.length; i++) ...[
+                        if (i > 0) Divider(),
+                        WeeklyBreakdownRow(
+                          week: weekRows[i],
+                          scaleMinutes: weekRows.fold<int>(0, (largest, week) {
+                            final value =
+                                week.minutes > (week.targetMinutes ?? 0)
+                                ? week.minutes
+                                : (week.targetMinutes ?? 0);
+                            return value > largest ? value : largest;
+                          }),
+                        ),
+                      ],
+                    ],
+                  ),
                 ),
-              ),
+                SizedBox(height: 12),
+                _Card(
+                  color: Color(0xfffff0e5),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Icon(
+                        Icons.info_outline,
+                        color: mhpColor(context, brandAction),
+                        size: 22,
+                      ),
+                      SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'How overtime is counted',
+                              style: TextStyle(fontWeight: FontWeight.w700),
+                            ),
+                            SizedBox(height: 4),
+                            Text(
+                              'Overtime is positive weekly excess across full weeks touching this month, including days outside the month.',
+                              style: TextStyle(
+                                color: mhpColor(context, brandMuted),
+                                fontSize: 13,
+                                height: 1.5,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                SizedBox(height: 14),
+                _Card(
+                  loading: awaitingCalendar || awaitingWeeks,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Text('Monthly breaks', style: _sectionStyle),
+                      SizedBox(height: 8),
+                      _BreakRow(
+                        'Breaks recorded',
+                        totals == null ? 'Unavailable' : '${totals.breakCount}',
+                      ),
+                      Divider(),
+                      _BreakRow(
+                        'Paid breaks included',
+                        totals == null
+                            ? 'Unavailable'
+                            : compactHours(totals.paidMinutes),
+                      ),
+                      Divider(),
+                      _BreakRow(
+                        'Unpaid breaks deducted',
+                        totals == null
+                            ? 'Unavailable'
+                            : compactHours(totals.unpaidMinutes),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
             ],
           ),
         ),

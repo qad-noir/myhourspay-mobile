@@ -127,6 +127,81 @@ void main() {
     expect(find.text('Add hours'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
+  testWidgets('month changes shimmer only content and preserve page controls', (
+    tester,
+  ) async {
+    var hold = false;
+    final pending = <Completer<http.Response>>[];
+    final requests = <http.Request>[];
+    final model = monthModel(
+      client: MockClient((request) {
+        if (!hold) {
+          return Future.value(fixtureForRequest(request, monthFixture()));
+        }
+        requests.add(request);
+        final response = Completer<http.Response>();
+        pending.add(response);
+        return response.future;
+      }),
+    );
+    addTearDown(model.dispose);
+    await loadFixtureMonth(model);
+    await tester.pumpWidget(preview(model));
+    await tester.pumpAndSettle();
+    final footerPosition = tester.getTopLeft(find.text('Add hours'));
+    hold = true;
+    await tester.tap(find.byTooltip('Next month'));
+    await tester.pump();
+    expect(pending, isNotEmpty);
+    expect(find.text('Your month'), findsOneWidget);
+    expect(find.text('October 2026'), findsOneWidget);
+    expect(find.byTooltip('Account and devices'), findsOneWidget);
+    expect(find.text('Add hours'), findsOneWidget);
+    expect(tester.getTopLeft(find.text('Add hours')), footerPosition);
+    expect(find.text('Unavailable'), findsNothing);
+    expect(
+      tester
+          .widgetList<SkeletonRegion>(find.byType(SkeletonRegion))
+          .where((s) => s.loading),
+      isNotEmpty,
+    );
+    for (final control in [
+      find.byTooltip('Account and devices'),
+      find.text('Add hours'),
+      find.text(model.workspace!.name),
+    ]) {
+      for (final element in control.evaluate()) {
+        element.visitAncestorElements((ancestor) {
+          expect(ancestor.widget is SkeletonRegion, isFalse);
+          return true;
+        });
+      }
+    }
+    for (var i = 0; i < pending.length; i++) {
+      pending[i].complete(fixtureForRequest(requests[i], monthFixture()));
+    }
+    await tester.pumpAndSettle();
+    expect(tester.takeException(), isNull);
+    hold = false;
+    await tester.tap(find.text('Hours'));
+    await tester.pumpAndSettle();
+    pending.clear();
+    requests.clear();
+    hold = true;
+    await tester.ensureVisible(find.byTooltip('Next week'));
+    await tester.tap(find.byTooltip('Next week'));
+    await tester.pump();
+    expect(pending, isNotEmpty);
+    expect(find.text('Your hours'), findsOneWidget);
+    expect(find.byTooltip('Account and devices'), findsOneWidget);
+    expect(find.text('Add hours'), findsOneWidget);
+    expect(find.text(model.workspace!.name), findsOneWidget);
+    for (var i = 0; i < pending.length; i++) {
+      pending[i].complete(fixtureForRequest(requests[i], monthFixture()));
+    }
+    await tester.pumpAndSettle();
+    expect(tester.takeException(), isNull);
+  });
   testWidgets('dark monthly calendar retains readable selected-day contrast', (
     tester,
   ) async {

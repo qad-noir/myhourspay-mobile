@@ -21,6 +21,7 @@ class HoursScreen extends StatefulWidget {
 
 class _HoursScreenState extends State<HoursScreen> with WidgetsBindingObserver {
   late int tab = widget.initialTab;
+  bool _hasLoadedContent = false;
   SessionModel get model => widget.model;
   @override
   void initState() {
@@ -99,6 +100,11 @@ class _HoursScreenState extends State<HoursScreen> with WidgetsBindingObserver {
                   (model.monthly.overtimeMinutes == null &&
                       model.monthly.weeksFailure == null)
             : shownPage == null && shownFailure == null);
+    if ((tab == 0 || tab == 1) && !overviewPending && !hoursPending) {
+      _hasLoadedContent = true;
+    }
+    final initialPending =
+        !_hasLoadedContent && (overviewPending || hoursPending);
     final recent = List<HoursEntry>.of(shownPage?.entries ?? [])
       ..sort((a, b) => b.date.compareTo(a.date));
     final items = [
@@ -171,7 +177,7 @@ class _HoursScreenState extends State<HoursScreen> with WidgetsBindingObserver {
                 top: false,
                 child: Padding(
                   padding: EdgeInsets.fromLTRB(22, 10, 22, 14),
-                  child: (overviewPending || hoursPending)
+                  child: initialPending
                       ? const SkeletonRegion(
                           loading: true,
                           child: SizedBox(height: 52, width: double.infinity),
@@ -204,12 +210,13 @@ class _HoursScreenState extends State<HoursScreen> with WidgetsBindingObserver {
               body: tab == 0 && model.overviewMonthly
                   ? MonthlyOverviewView(
                       model: model,
+                      initialLoading: !_hasLoadedContent,
                       onAccount: () => selectTab(accountTab),
                       onEntry: (entry) => edit(entry: entry),
                     )
-                  : hoursPending
+                  : hoursPending && initialPending
                   ? const HoursSkeleton()
-                  : overviewPending
+                  : overviewPending && initialPending
                   ? const OverviewSkeleton(monthly: false)
                   : PageBody(
                       children: [
@@ -296,6 +303,11 @@ class _HoursScreenState extends State<HoursScreen> with WidgetsBindingObserver {
                                 ],
                               ),
                             ),
+                            if (shownPage == null && shownLoading)
+                              const SkeletonRegion(
+                                loading: true,
+                                child: SizedBox(width: 90, height: 48),
+                              ),
                             if (shownPage != null)
                               Flexible(
                                 child: Column(
@@ -358,7 +370,12 @@ class _HoursScreenState extends State<HoursScreen> with WidgetsBindingObserver {
                         if (shownLoading)
                           Padding(
                             padding: EdgeInsets.only(top: 24),
-                            child: LoadingCards(),
+                            child: tab == 0
+                                ? const OverviewSkeleton(
+                                    monthly: false,
+                                    contentOnly: true,
+                                  )
+                                : const LoadingCards(),
                           )
                         else if (shownPage != null) ...[
                           if (tab == 0) ...[

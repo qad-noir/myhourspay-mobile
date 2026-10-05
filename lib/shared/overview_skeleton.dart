@@ -69,9 +69,11 @@ class OverviewSkeleton extends StatelessWidget {
     super.key,
     required this.monthly,
     this.calendarRows = 5,
+    this.contentOnly = false,
   });
   final bool monthly;
   final int calendarRows;
+  final bool contentOnly;
 
   @override
   Widget build(BuildContext context) {
@@ -79,33 +81,39 @@ class OverviewSkeleton extends StatelessWidget {
       loading: true,
       child: SizedBox(height: height, width: width ?? double.infinity),
     );
-    return Semantics(
+    final placeholder = Semantics(
       label: 'Loading overview',
       child: SafeArea(
+        top: !contentOnly,
         bottom: false,
         child: SingleChildScrollView(
-          padding: const EdgeInsets.fromLTRB(22, 16, 22, 24),
+          padding: contentOnly
+              ? EdgeInsets.zero
+              : const EdgeInsets.fromLTRB(22, 16, 22, 24),
+          physics: contentOnly ? const NeverScrollableScrollPhysics() : null,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Row(
-                children: [
-                  block(38, width: 36),
-                  const SizedBox(width: 12),
-                  Expanded(child: block(20)),
-                  const SizedBox(width: 64),
-                  block(38, width: 38),
-                ],
-              ),
-              const SizedBox(height: 24),
-              block(36, width: 190),
-              const SizedBox(height: 8),
-              block(20, width: 160),
-              const SizedBox(height: 14),
-              block(48),
-              const SizedBox(height: 4),
-              block(56),
-              const SizedBox(height: 14),
+              if (!contentOnly) ...[
+                Row(
+                  children: [
+                    block(38, width: 36),
+                    const SizedBox(width: 12),
+                    Expanded(child: block(20)),
+                    const SizedBox(width: 64),
+                    block(38, width: 38),
+                  ],
+                ),
+                const SizedBox(height: 24),
+                block(36, width: 190),
+                const SizedBox(height: 8),
+                block(20, width: 160),
+                const SizedBox(height: 14),
+                block(48),
+                const SizedBox(height: 4),
+                block(56),
+                const SizedBox(height: 14),
+              ],
               if (monthly) ...[
                 Row(
                   children: [
@@ -159,5 +167,6 @@ class OverviewSkeleton extends StatelessWidget {
         ),
       ),
     );
+    return placeholder;
   }
 }
