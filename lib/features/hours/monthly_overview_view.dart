@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../shared/widgets.dart';
+import '../../shared/overview_skeleton.dart';
 import '../../core/api_client.dart';
 import '../../shared/hours_widgets.dart';
 import '../session/session_model.dart';
@@ -105,6 +106,12 @@ class MonthlyOverviewView extends StatelessWidget {
     final awaitingCalendar = totals == null && state.calendarFailure == null;
     final awaitingWeeks =
         state.overtimeMinutes == null && state.weeksFailure == null;
+    if (awaitingCalendar || awaitingWeeks) {
+      return OverviewSkeleton(
+        monthly: true,
+        calendarRows: monthCells(month).length ~/ 7,
+      );
+    }
     final weekRows = state.snapshot?.fullWeeks != null
         ? state.weeks
         : [

@@ -1,3 +1,8 @@
+import 'dart:async';
+
+import 'package:http/http.dart' as http;
+import 'package:http/testing.dart';
+
 import 'dart:io';
 import 'dart:ui' as ui;
 
@@ -77,6 +82,8 @@ void main() {
           .where((s) => s.loading),
       isNotEmpty,
     );
+    expect(find.text('Your month'), findsNothing);
+    expect(find.text('Unavailable'), findsNothing);
     for (final element in find.text('Unavailable').evaluate()) {
       var masked = false;
       element.visitAncestorElements((ancestor) {
@@ -89,6 +96,36 @@ void main() {
     await tester.pump(const Duration(milliseconds: 650));
     expect(tester.takeException(), isNull);
     await tester.pumpWidget(const SizedBox());
+  });
+  testWidgets('overview stays fully masked until both monthly ranges finish', (
+    tester,
+  ) async {
+    final requests = <http.Request>[];
+    final pending = <Completer<http.Response>>[];
+    final model = monthModel(
+      client: MockClient((request) {
+        requests.add(request);
+        final next = Completer<http.Response>();
+        pending.add(next);
+        return next.future;
+      }),
+    );
+    addTearDown(model.dispose);
+    model.monthly.bind(model.account!.id, model.workspace!);
+    final loading = model.monthly.refresh();
+    await tester.pumpWidget(preview(model));
+    expect(pending.length, 2);
+    expect(find.text('Your month'), findsNothing);
+    pending[0].complete(fixtureForRequest(requests[0], monthFixture()));
+    await tester.pump();
+    expect(find.text('Your month'), findsNothing);
+    expect(find.text('Add hours'), findsNothing);
+    pending[1].complete(fixtureForRequest(requests[1], monthFixture()));
+    await loading;
+    await tester.pumpAndSettle();
+    expect(find.text('Your month'), findsOneWidget);
+    expect(find.text('Add hours'), findsOneWidget);
+    expect(tester.takeException(), isNull);
   });
   testWidgets('dark monthly calendar retains readable selected-day contrast', (
     tester,

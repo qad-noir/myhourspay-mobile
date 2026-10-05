@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../shared/widgets.dart';
+import '../../shared/overview_skeleton.dart';
 import '../../shared/hours_widgets.dart';
 import '../account/account_screen.dart';
 import '../session/session_model.dart';
@@ -89,6 +90,14 @@ class _HoursScreenState extends State<HoursScreen> with WidgetsBindingObserver {
     final shownPage = tab == 0 ? model.overviewData : model.page;
     final shownLoading = tab == 0 ? model.overviewLoading : model.loadingWeek;
     final shownFailure = tab == 0 ? model.overviewFailure : model.failure;
+    final overviewPending =
+        tab == 0 &&
+        (model.overviewMonthly
+            ? (model.monthly.totals == null &&
+                      model.monthly.calendarFailure == null) ||
+                  (model.monthly.overtimeMinutes == null &&
+                      model.monthly.weeksFailure == null)
+            : shownPage == null && shownFailure == null);
     final recent = List<HoursEntry>.of(shownPage?.entries ?? [])
       ..sort((a, b) => b.date.compareTo(a.date));
     final items = [
@@ -161,27 +170,34 @@ class _HoursScreenState extends State<HoursScreen> with WidgetsBindingObserver {
                 top: false,
                 child: Padding(
                   padding: EdgeInsets.fromLTRB(22, 10, 22, 14),
-                  child: FilledButton.icon(
-                    onPressed:
-                        w.writable &&
-                            !shownLoading &&
-                            (tab != 0 ||
-                                !model.overviewMonthly ||
-                                (model.monthly.totals != null &&
-                                    !model.monthly.loadingCalendar &&
-                                    model.monthly.calendarFailure == null))
-                        ? () => edit(
-                            initialDate: tab == 0
-                                ? model.overviewMonthly &&
-                                          model.monthly.selectedEntry == null
-                                      ? model.monthly.selectedDate
-                                      : workspaceToday(w.timezone)
-                                : null,
-                          )
-                        : null,
-                    icon: Icon(Icons.add),
-                    label: Text('Add hours'),
-                  ),
+                  child: overviewPending
+                      ? const SkeletonRegion(
+                          loading: true,
+                          child: SizedBox(height: 52, width: double.infinity),
+                        )
+                      : FilledButton.icon(
+                          onPressed:
+                              w.writable &&
+                                  !shownLoading &&
+                                  (tab != 0 ||
+                                      !model.overviewMonthly ||
+                                      (model.monthly.totals != null &&
+                                          !model.monthly.loadingCalendar &&
+                                          model.monthly.calendarFailure ==
+                                              null))
+                              ? () => edit(
+                                  initialDate: tab == 0
+                                      ? model.overviewMonthly &&
+                                                model.monthly.selectedEntry ==
+                                                    null
+                                            ? model.monthly.selectedDate
+                                            : workspaceToday(w.timezone)
+                                      : null,
+                                )
+                              : null,
+                          icon: Icon(Icons.add),
+                          label: Text('Add hours'),
+                        ),
                 ),
               ),
               body: tab == 0 && model.overviewMonthly
@@ -190,6 +206,8 @@ class _HoursScreenState extends State<HoursScreen> with WidgetsBindingObserver {
                       onAccount: () => selectTab(accountTab),
                       onEntry: (entry) => edit(entry: entry),
                     )
+                  : overviewPending
+                  ? const OverviewSkeleton(monthly: false)
                   : PageBody(
                       children: [
                         Row(
