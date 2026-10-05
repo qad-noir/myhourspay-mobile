@@ -9,7 +9,27 @@ pending, then completes that request with 401.
 A fresh designated local test login against `http://127.0.0.1:8000/api/v1/mobile`
 returned login 200/authenticated, `/me` 200 and `/workspaces` 200. The temporary
 diagnostic session was revoked (204). This was an HTTP probe, not a successful
-Chrome login; the browser-specific rejection remains to be diagnosed.
+Chrome login.
+
+## Root cause found from the follow-up trace
+
+The follow-up showed `/me` 200 with a bearer, then `/workspaces` 401 with no bearer.
+The backend issued a roughly 30-day session. `_scheduleExpiry` previously passed
+that full delay into Dart's browser Timer, implemented via JavaScript `setTimeout`.
+The delay exceeds its signed 32-bit millisecond limit (about 24.8 days), causing
+immediate expiry and token clearing.
+
+Scheduling now uses at most one-day intervals, rechecks the absolute expiry at each
+wake, and ignores callbacks for a disposed/replaced session. Genuine expiry still
+clears tokens. This also applies to restored sessions, MFA and verification tokens.
+No server token lifetime or auth protocol was changed.
+
+An isolated Chromium page reproduced the 30-day timer firing within 150ms while a
+one-day timer remained pending. It used no credentials or API requests. Fourteen
+focused Flutter tests passed, including keeping the bearer through a delayed `/me`
+with a 30-day token and clearing a genuinely expired restored token. The automated
+Chrome Flutter harness stalled before running its test and was stopped; no live
+Chrome login success is claimed from that harness.
 
 Restart the app with:
 

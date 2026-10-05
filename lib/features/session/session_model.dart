@@ -634,16 +634,27 @@ class SessionModel extends ChangeNotifier {
   void _scheduleExpiry(DateTime time) {
     _expiry?.cancel();
     final duration = time.difference(DateTime.now());
-    _expiry = Timer(
-      duration.isNegative ? Duration.zero : duration,
-      () => _sessionFailure(
+    // JavaScript setTimeout overflows beyond ~24.8 days. Recheck daily instead
+    // of scheduling a long-lived native API token in one browser timer.
+    final delay = duration.isNegative
+        ? Duration.zero
+        : duration > const Duration(days: 1)
+        ? const Duration(days: 1)
+        : duration;
+    _expiry = Timer(delay, () {
+      if (_disposed || _storedSession?.expiresAt != time) return;
+      if (time.isAfter(DateTime.now())) {
+        _scheduleExpiry(time);
+        return;
+      }
+      _sessionFailure(
         const ApiFailure(
           'session_expired',
           'Your session expired. Sign in again.',
           status: 401,
         ),
-      ),
-    );
+      );
+    });
   }
 
   void _sessionFailure(ApiFailure error) {
