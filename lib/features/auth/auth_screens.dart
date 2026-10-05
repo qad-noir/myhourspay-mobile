@@ -46,8 +46,9 @@ class _LoginScreenState extends State<LoginScreen> {
     final label = await widget.deviceLabelLoader();
     if (!mounted) return;
     await widget.model.login(email.text.trim(), password.text, label);
+    if (!mounted) return;
     password.clear();
-    if (mounted) setState(() => preparing = false);
+    setState(() => preparing = false);
   }
 
   @override
@@ -296,6 +297,7 @@ class _ChallengeScreenState extends State<ChallengeScreen> {
                       } else {
                         await model.completeMfa(code.text.trim(), recovery);
                       }
+                      if (!mounted) return;
                       code.clear();
                     },
               child: Text(

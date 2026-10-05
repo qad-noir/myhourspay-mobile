@@ -25,7 +25,10 @@ void main() {
       const String.fromEnvironment('API_BASE_URL'),
       release: kReleaseMode,
     );
-    final api = ApiClient(config);
+    final api = ApiClient(
+      config,
+      onDiagnostic: kDebugMode ? (line) => debugPrint(line) : null,
+    );
     runApp(
       MhpApp(
         googleIdentity: NativeGoogleIdentity(

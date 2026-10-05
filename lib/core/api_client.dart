@@ -30,10 +30,12 @@ class ApiClient {
     this.environment, {
     http.Client? transport,
     this.timeout = const Duration(seconds: 20),
+    this.onDiagnostic,
   }) : _transport = transport ?? http.Client();
   final ApiEnvironment environment;
   final http.Client _transport;
   final Duration timeout;
+  final void Function(String)? onDiagnostic;
   String? token;
   DateTime? _retryAt;
   void Function(ApiFailure)? onSessionFailure;
@@ -82,6 +84,14 @@ class ApiClient {
               throw TimeoutException('Request timed out');
             },
           );
+      if (onDiagnostic != null &&
+          const bool.fromEnvironment('MHP_API_DIAGNOSTICS')) {
+        final route = path.replaceAll(RegExp(r'/[0-9]+(?=/|$)'), '/:id');
+        // Protocol metadata only: never credentials, payloads or response bodies.
+        onDiagnostic!(
+          'MHP API $method $route HTTP ${response.statusCode}; bearer=${credential != null ? "attached" : "none"}',
+        );
+      }
       Json data = {};
       if (response.body.isNotEmpty) {
         try {
