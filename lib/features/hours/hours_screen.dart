@@ -213,6 +213,7 @@ class _HoursScreenState extends State<HoursScreen> with WidgetsBindingObserver {
                       initialLoading: !_hasLoadedContent,
                       onAccount: () => selectTab(accountTab),
                       onEntry: (entry) => edit(entry: entry),
+                      onAddDate: (date) => edit(initialDate: date),
                     )
                   : hoursPending && initialPending
                   ? const HoursSkeleton()

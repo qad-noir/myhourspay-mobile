@@ -80,12 +80,14 @@ class MonthlyOverviewView extends StatelessWidget {
     required this.model,
     required this.onAccount,
     required this.onEntry,
+    this.onAddDate,
     this.initialLoading = true,
   });
   final SessionModel model;
   final bool initialLoading;
   final VoidCallback onAccount;
   final ValueChanged<HoursEntry> onEntry;
+  final ValueChanged<DateTime>? onAddDate;
   MonthlyOverviewModel get state => model.monthly;
   Future<void> pickMonth(BuildContext context) async {
     final chosen = await showDialog<DateTime>(
@@ -342,7 +344,22 @@ class MonthlyOverviewView extends StatelessWidget {
                         selected: selected,
                         entries: totals?.entries ?? [],
                         available: calendarReady,
-                        onSelect: calendarReady ? state.selectDay : null,
+                        onSelect: calendarReady
+                            ? (date) {
+                                if (dateKey(date) == dateKey(selected) &&
+                                    workspace.writable &&
+                                    !state.loadingCalendar &&
+                                    state.calendarFailure == null) {
+                                  if (entry != null) {
+                                    onEntry(entry);
+                                  } else {
+                                    onAddDate?.call(date);
+                                  }
+                                } else {
+                                  state.selectDay(date);
+                                }
+                              }
+                            : null,
                       ),
                       if (totals?.entries.isEmpty == true)
                         Padding(

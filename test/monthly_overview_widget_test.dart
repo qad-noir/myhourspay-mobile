@@ -233,7 +233,7 @@ void main() {
     expect(tester.takeException(), isNull);
   });
   testWidgets(
-    'logged date selects actual entry, View entry opens editing, empty date supplies add date',
+    'second calendar tap edits existing entry or adds selected empty date',
     (tester) async {
       final model = monthModel();
       addTearDown(model.dispose);
@@ -245,8 +245,8 @@ void main() {
       await tester.tap(day);
       await tester.pumpAndSettle();
       expect(model.monthly.selectedEntry!.netMinutes, 720);
-      await tester.ensureVisible(find.text('View entry'));
-      await tester.tap(find.text('View entry'));
+      await tester.ensureVisible(day);
+      await tester.tap(day);
       await tester.pumpAndSettle();
       expect(find.text('Update hours'), findsNWidgets(2));
       expect(find.text('07:00'), findsOneWidget);
@@ -257,7 +257,7 @@ void main() {
       await tester.ensureVisible(empty);
       await tester.tap(empty);
       await tester.pumpAndSettle();
-      await tester.tap(find.text('Add hours'));
+      await tester.tap(empty);
       await tester.pumpAndSettle();
       expect(find.text('Saturday, 19 Sep'), findsOneWidget);
     },
