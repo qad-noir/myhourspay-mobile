@@ -17,13 +17,14 @@ import 'support/monthly_fixtures.dart';
 Widget preview(
   SessionModel model, {
   double scale = 1,
+  bool dark = false,
   EdgeInsets safe = const EdgeInsets.only(top: 24, bottom: 16),
   GlobalKey? capture,
 }) => RepaintBoundary(
   key: capture,
   child: MaterialApp(
     debugShowCheckedModeBanner: false,
-    theme: mhpTheme(),
+    theme: mhpTheme(dark: dark),
     builder: (context, child) => phoneShell(
       context,
       MediaQuery(
@@ -51,6 +52,26 @@ void main() {
         entry.key,
       )..addFont(rootBundle.load(entry.value))).load();
     }
+  });
+  testWidgets('dark monthly calendar retains readable selected-day contrast', (
+    tester,
+  ) async {
+    final model = monthModel();
+    addTearDown(model.dispose);
+    await loadFixtureMonth(model);
+    model.monthly.selectDay(DateTime(2026, 9, 18));
+    await tester.pumpWidget(preview(model, dark: true));
+    await tester.pumpAndSettle();
+    final cell = find.byKey(const ValueKey('month-day-2026-09-18'));
+    await tester.ensureVisible(cell);
+    final text = tester.widget<Text>(
+      find.descendant(of: cell, matching: find.text('18')),
+    );
+    final contrast =
+        (brandOrange.computeLuminance() + .05) /
+        (text.style!.color!.computeLuminance() + .05);
+    expect(contrast, greaterThanOrEqualTo(4.5));
+    expect(tester.takeException(), isNull);
   });
   testWidgets(
     'logged date selects actual entry, View entry opens editing, empty date supplies add date',

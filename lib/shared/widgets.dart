@@ -15,35 +15,68 @@ const titleStyle = TextStyle(
   fontSize: 28,
   fontWeight: FontWeight.w800,
   letterSpacing: -1,
-  color: brandInk,
 );
 const totalStyle = TextStyle(
   fontFamily: 'Manrope',
   fontSize: 40,
   fontWeight: FontWeight.w800,
   letterSpacing: -1.6,
-  color: brandInk,
 );
-ThemeData mhpTheme() {
+Color mhpColor(BuildContext context, Color light) {
+  if (Theme.of(context).brightness != Brightness.dark) return light;
+  if (light == brandInk) return const Color(0xfff5f1eb);
+  if (light == brandMuted) return const Color(0xffb5b2bf);
+  if (light == brandBorder) return const Color(0xff39363f);
+  if (light == brandSurface) return const Color(0xff151319);
+  if (light == brandAction) return const Color(0xffff926d);
+  if (light == brandPeach) return const Color(0xff422a23);
+  if (light == brandGreen) return const Color(0xff223a2c);
+  if (light == const Color(0xffb3261e)) {
+    return Theme.of(context).colorScheme.error;
+  }
+  if (light == Colors.white) return const Color(0xff211e26);
+  if (light.computeLuminance() > .65) {
+    if (light.g > light.r && light.g > light.b) return const Color(0xff223a2c);
+    if (light.r > light.g + .03) return const Color(0xff422a23);
+    return const Color(0xff29262f);
+  }
+  if (light.g > light.r &&
+      light.g > light.b &&
+      light.computeLuminance() < .25) {
+    return const Color(0xff8edbb3);
+  }
+  return light;
+}
+
+ThemeData mhpTheme({bool dark = false}) {
+  final ink = dark ? const Color(0xfff5f1eb) : brandInk;
+  final muted = dark ? const Color(0xffb5b2bf) : brandMuted;
+  final surface = dark ? const Color(0xff151319) : brandSurface;
+  final outline = dark ? const Color(0xff39363f) : brandBorder;
+  final action = dark ? const Color(0xffff926d) : brandAction;
   final border = OutlineInputBorder(
     borderRadius: BorderRadius.circular(11),
-    borderSide: const BorderSide(color: brandBorder),
+    borderSide: BorderSide(color: outline),
   );
   return ThemeData(
     useMaterial3: true,
     fontFamily: 'DM Sans',
-    scaffoldBackgroundColor: brandSurface,
-    colorScheme: const ColorScheme.light(
-      primary: brandAction,
-      onPrimary: Colors.white,
+    brightness: dark ? Brightness.dark : Brightness.light,
+    scaffoldBackgroundColor: surface,
+    colorScheme: ColorScheme(
+      brightness: dark ? Brightness.dark : Brightness.light,
+      primary: action,
+      onPrimary: dark ? brandInk : Colors.white,
       secondary: brandOrange,
-      surface: brandSurface,
-      onSurface: brandInk,
-      onSurfaceVariant: brandMuted,
-      outline: brandBorder,
-      error: Color(0xffb3261e),
+      onSecondary: brandInk,
+      surface: surface,
+      onSurface: ink,
+      onSurfaceVariant: muted,
+      outline: outline,
+      error: dark ? const Color(0xffffaaa4) : const Color(0xffb3261e),
+      onError: Colors.white,
     ),
-    textTheme: const TextTheme(
+    textTheme: TextTheme(
       headlineLarge: titleStyle,
       headlineMedium: titleStyle,
       titleLarge: TextStyle(
@@ -52,14 +85,14 @@ ThemeData mhpTheme() {
         fontWeight: FontWeight.w800,
         letterSpacing: -.5,
       ),
-      bodyLarge: TextStyle(fontSize: 16, color: brandInk),
-      bodyMedium: TextStyle(fontSize: 15, color: brandInk),
-      bodySmall: TextStyle(fontSize: 13, color: brandMuted),
+      bodyLarge: TextStyle(fontSize: 16, color: ink),
+      bodyMedium: TextStyle(fontSize: 15, color: ink),
+      bodySmall: TextStyle(fontSize: 13, color: muted),
       labelLarge: TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
     ),
-    appBarTheme: const AppBarTheme(
-      backgroundColor: brandSurface,
-      foregroundColor: brandInk,
+    appBarTheme: AppBarTheme(
+      backgroundColor: surface,
+      foregroundColor: ink,
       surfaceTintColor: Colors.transparent,
       elevation: 0,
       centerTitle: false,
@@ -67,34 +100,30 @@ ThemeData mhpTheme() {
         fontFamily: 'Manrope',
         fontSize: 22,
         fontWeight: FontWeight.w800,
-        color: brandInk,
+        color: ink,
       ),
     ),
-    dividerTheme: const DividerThemeData(
-      color: brandBorder,
-      thickness: 1,
-      space: 1,
-    ),
-    iconTheme: const IconThemeData(size: 22, color: brandMuted),
+    dividerTheme: DividerThemeData(color: outline, thickness: 1, space: 1),
+    iconTheme: IconThemeData(size: 22, color: muted),
     inputDecorationTheme: InputDecorationTheme(
       filled: true,
-      fillColor: Colors.white.withValues(alpha: .35),
+      fillColor: dark
+          ? const Color(0xff211e26)
+          : Colors.white.withValues(alpha: .35),
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
       border: border,
       enabledBorder: border,
       disabledBorder: border,
-      focusedBorder: border.copyWith(
-        borderSide: const BorderSide(color: brandAction),
-      ),
-      labelStyle: const TextStyle(color: brandMuted, fontSize: 15),
-      hintStyle: const TextStyle(color: brandMuted, fontSize: 14),
-      prefixIconColor: brandMuted,
-      suffixIconColor: brandMuted,
+      focusedBorder: border.copyWith(borderSide: BorderSide(color: action)),
+      labelStyle: TextStyle(color: muted, fontSize: 15),
+      hintStyle: TextStyle(color: muted, fontSize: 14),
+      prefixIconColor: muted,
+      suffixIconColor: muted,
     ),
     filledButtonTheme: FilledButtonThemeData(
       style: FilledButton.styleFrom(
-        backgroundColor: brandAction,
-        foregroundColor: Colors.white,
+        backgroundColor: action,
+        foregroundColor: dark ? brandInk : Colors.white,
         minimumSize: const Size(64, 54),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(11)),
         textStyle: const TextStyle(
@@ -107,7 +136,7 @@ ThemeData mhpTheme() {
     outlinedButtonTheme: OutlinedButtonThemeData(
       style: OutlinedButton.styleFrom(
         minimumSize: const Size(48, 52),
-        side: const BorderSide(color: brandBorder),
+        side: BorderSide(color: outline),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(11)),
       ),
     ),
@@ -123,10 +152,12 @@ class PageBody extends StatelessWidget {
     super.key,
     required this.children,
     this.footer,
+    this.fillViewport = true,
     this.padding = const EdgeInsets.all(22),
   });
   final List<Widget> children;
   final Widget? footer;
+  final bool fillViewport;
   final EdgeInsets padding;
   @override
   Widget build(BuildContext context) => SafeArea(
@@ -141,31 +172,32 @@ class PageBody extends StatelessWidget {
               double.infinity,
             ),
           ),
-          child: IntrinsicHeight(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                ...children,
-                if (footer != null) ...[
-                  const Spacer(),
-                  const SizedBox(height: 24),
-                  footer!,
-                ],
-              ],
-            ),
-          ),
+          child: fillViewport
+              ? IntrinsicHeight(child: content(true))
+              : content(false),
         ),
       ),
     ),
   );
+  Widget content(bool fill) => Column(
+    crossAxisAlignment: CrossAxisAlignment.stretch,
+    children: [
+      ...children,
+      if (footer != null) ...[
+        if (fill) Spacer(),
+        SizedBox(height: 24),
+        footer!,
+      ],
+    ],
+  );
 }
 
 Widget phoneShell(BuildContext context, Widget? child) => ColoredBox(
-  color: brandBorder,
+  color: mhpColor(context, brandBorder),
   child: Center(
     child: ConstrainedBox(
-      constraints: const BoxConstraints(maxWidth: 430),
-      child: child ?? const SizedBox.shrink(),
+      constraints: BoxConstraints(maxWidth: 430),
+      child: child ?? SizedBox.shrink(),
     ),
   ),
 );
@@ -185,8 +217,12 @@ class Panel extends StatelessWidget {
   Widget build(BuildContext context) => Container(
     padding: padding,
     decoration: BoxDecoration(
-      color: color,
-      border: Border.all(color: borderColor),
+      color:
+          Theme.of(context).brightness == Brightness.dark &&
+              color == const Color(0x88ffffff)
+          ? const Color(0xff211e26)
+          : mhpColor(context, color),
+      border: Border.all(color: mhpColor(context, borderColor)),
       borderRadius: BorderRadius.circular(11),
     ),
     child: child,
@@ -199,17 +235,21 @@ class InfoPanel extends StatelessWidget {
   final bool success;
   @override
   Widget build(BuildContext context) => Panel(
-    color: success ? brandGreen : const Color(0xfff0f0f2),
+    color: success
+        ? mhpColor(context, brandGreen)
+        : mhpColor(context, Color(0xfff0f0f2)),
     child: Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Icon(
           success ? Icons.check_circle_outline : Icons.info_outline,
-          color: success ? const Color(0xff28633e) : brandInk,
+          color: success
+              ? mhpColor(context, Color(0xff28633e))
+              : mhpColor(context, brandInk),
         ),
-        const SizedBox(width: 12),
+        SizedBox(width: 12),
         Expanded(
-          child: Text(text, style: const TextStyle(fontSize: 13, height: 1.5)),
+          child: Text(text, style: TextStyle(fontSize: 13, height: 1.5)),
         ),
       ],
     ),
@@ -222,16 +262,20 @@ class StatusBadge extends StatelessWidget {
   final bool success;
   @override
   Widget build(BuildContext context) => Container(
-    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+    padding: EdgeInsets.symmetric(horizontal: 10, vertical: 6),
     decoration: BoxDecoration(
-      color: success ? const Color(0xffdcefe4) : brandPeach,
+      color: success
+          ? mhpColor(context, Color(0xffdcefe4))
+          : mhpColor(context, brandPeach),
       borderRadius: BorderRadius.circular(20),
     ),
     child: Text(
       text,
       style: TextStyle(
         fontSize: 12,
-        color: success ? const Color(0xff17613c) : brandAction,
+        color: success
+            ? mhpColor(context, Color(0xff17613c))
+            : mhpColor(context, brandAction),
         fontWeight: FontWeight.w500,
       ),
     ),
@@ -251,12 +295,17 @@ class InitialAvatar extends StatelessWidget {
   @override
   Widget build(BuildContext context) => CircleAvatar(
     radius: size / 2,
-    backgroundColor: peach ? brandPeach : const Color(0xffeae9e8),
+    backgroundColor: peach
+        ? mhpColor(context, brandPeach)
+        : mhpColor(context, Color(0xffeae9e8)),
     child: Text(
       name.trim().isEmpty
           ? '?'
           : name.trim().split(RegExp(r'\s+')).take(2).map((v) => v[0]).join(),
-      style: TextStyle(color: brandInk, fontSize: size * .32),
+      style: TextStyle(
+        color: mhpColor(context, brandInk),
+        fontSize: size * .32,
+      ),
     ),
   );
 }
@@ -266,10 +315,14 @@ class SectionLabel extends StatelessWidget {
   final String text;
   @override
   Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.only(bottom: 12),
+    padding: EdgeInsets.only(bottom: 12),
     child: Text(
       text,
-      style: const TextStyle(color: brandMuted, fontSize: 12, letterSpacing: 1),
+      style: TextStyle(
+        color: mhpColor(context, brandMuted),
+        fontSize: 12,
+        letterSpacing: 1,
+      ),
     ),
   );
 }
@@ -283,13 +336,22 @@ class LoadingCards extends StatelessWidget {
       children: [
         for (var i = 0; i < 3; i++)
           Padding(
-            padding: const EdgeInsets.only(bottom: 12),
+            padding: EdgeInsets.only(bottom: 12),
             child: Panel(
               child: Row(
                 children: [
-                  Container(width: 44, height: 44, color: brandBorder),
-                  const SizedBox(width: 16),
-                  Expanded(child: Container(height: 16, color: brandBorder)),
+                  Container(
+                    width: 44,
+                    height: 44,
+                    color: mhpColor(context, brandBorder),
+                  ),
+                  SizedBox(width: 16),
+                  Expanded(
+                    child: Container(
+                      height: 16,
+                      color: mhpColor(context, brandBorder),
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -365,9 +427,9 @@ class ErrorNotice extends StatelessWidget {
   final ApiFailure? failure;
   @override
   Widget build(BuildContext context) => failure == null
-      ? const SizedBox.shrink()
+      ? SizedBox.shrink()
       : Padding(
-          padding: const EdgeInsets.symmetric(vertical: 12),
+          padding: EdgeInsets.symmetric(vertical: 12),
           child: Semantics(
             liveRegion: true,
             child: Text(
@@ -383,9 +445,9 @@ class Notice extends StatelessWidget {
   final String? text;
   @override
   Widget build(BuildContext context) => text == null
-      ? const SizedBox.shrink()
+      ? SizedBox.shrink()
       : Padding(
-          padding: const EdgeInsets.symmetric(vertical: 12),
+          padding: EdgeInsets.symmetric(vertical: 12),
           child: Semantics(liveRegion: true, child: Text(text!)),
         );
 }

@@ -75,6 +75,7 @@ void main() {
       addTearDown(model.dispose);
       await tester.pumpWidget(shell(AccountScreen(model: model)));
       await tester.pumpAndSettle();
+      await tester.ensureVisible(find.text('Revoke'));
       await tester.tap(find.text('Revoke'));
       await tester.pumpAndSettle();
       await tester.tap(find.text('Cancel'));

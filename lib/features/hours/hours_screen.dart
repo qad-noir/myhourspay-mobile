@@ -71,7 +71,7 @@ class _HoursScreenState extends State<HoursScreen> with WidgetsBindingObserver {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            duration: const Duration(seconds: 4),
+            duration: Duration(seconds: 4),
             behavior: SnackBarBehavior.floating,
             content: Text(
               model.failure == null ? 'Hours saved.' : 'Hours saved. Could not refresh the week; please try refreshing.',
@@ -106,9 +106,11 @@ class _HoursScreenState extends State<HoursScreen> with WidgetsBindingObserver {
           : SafeArea(
               top: false,
               child: Container(
-                decoration: const BoxDecoration(
-                  color: brandSurface,
-                  border: Border(top: BorderSide(color: brandBorder)),
+                decoration: BoxDecoration(
+                  color: mhpColor(context, brandSurface),
+                  border: Border(
+                    top: BorderSide(color: mhpColor(context, brandBorder)),
+                  ),
                 ),
                 child: Row(
                   children: [
@@ -119,23 +121,25 @@ class _HoursScreenState extends State<HoursScreen> with WidgetsBindingObserver {
                           child: InkWell(
                             onTap: () => selectTab(i),
                             child: Padding(
-                              padding: const EdgeInsets.symmetric(vertical: 10),
+                              padding: EdgeInsets.symmetric(vertical: 10),
                               child: Column(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
                                   Icon(
                                     tab == i ? items[i].$3 : items[i].$2,
-                                    color: tab == i ? brandAction : brandMuted,
+                                    color: tab == i
+                                        ? mhpColor(context, brandAction)
+                                        : mhpColor(context, brandMuted),
                                     size: 23,
                                   ),
-                                  const SizedBox(height: 3),
+                                  SizedBox(height: 3),
                                   Text(
                                     items[i].$1,
                                     style: TextStyle(
                                       fontSize: 11,
                                       color: tab == i
-                                          ? brandAction
-                                          : brandMuted,
+                                          ? mhpColor(context, brandAction)
+                                          : mhpColor(context, brandMuted),
                                     ),
                                   ),
                                 ],
@@ -156,7 +160,7 @@ class _HoursScreenState extends State<HoursScreen> with WidgetsBindingObserver {
               bottomNavigationBar: SafeArea(
                 top: false,
                 child: Padding(
-                  padding: const EdgeInsets.fromLTRB(22, 10, 22, 14),
+                  padding: EdgeInsets.fromLTRB(22, 10, 22, 14),
                   child: FilledButton.icon(
                     onPressed:
                         w.writable &&
@@ -175,8 +179,8 @@ class _HoursScreenState extends State<HoursScreen> with WidgetsBindingObserver {
                                 : null,
                           )
                         : null,
-                    icon: const Icon(Icons.add, color: Colors.white),
-                    label: const Text('Add hours'),
+                    icon: Icon(Icons.add),
+                    label: Text('Add hours'),
                   ),
                 ),
               ),
@@ -198,35 +202,35 @@ class _HoursScreenState extends State<HoursScreen> with WidgetsBindingObserver {
                                   child: Row(
                                     mainAxisSize: MainAxisSize.min,
                                     children: [
-                                      const Icon(
+                                      Icon(
                                         Icons.business_outlined,
                                         size: 19,
-                                        color: brandInk,
+                                        color: mhpColor(context, brandInk),
                                       ),
-                                      const SizedBox(width: 10),
+                                      SizedBox(width: 10),
                                       Flexible(
                                         child: Text(
                                           w.name,
                                           maxLines: 1,
                                           overflow: TextOverflow.ellipsis,
-                                          style: const TextStyle(
-                                            color: brandInk,
+                                          style: TextStyle(
+                                            color: mhpColor(context, brandInk),
                                             fontSize: 13,
                                           ),
                                         ),
                                       ),
-                                      const SizedBox(width: 14),
-                                      const Icon(
+                                      SizedBox(width: 14),
+                                      Icon(
                                         Icons.expand_more,
                                         size: 19,
-                                        color: brandInk,
+                                        color: mhpColor(context, brandInk),
                                       ),
                                     ],
                                   ),
                                 ),
                               ),
                             ),
-                            const SizedBox(width: 24),
+                            SizedBox(width: 24),
                             IconButton(
                               tooltip: 'Account and devices',
                               onPressed: () => setState(() => tab = accountTab),
@@ -237,16 +241,18 @@ class _HoursScreenState extends State<HoursScreen> with WidgetsBindingObserver {
                             ),
                           ],
                         ),
-                        const SizedBox(height: 22),
+                        SizedBox(height: 22),
                         if (tab == 0) ...[
                           OverviewPeriodSwitch(model: model),
-                          const SizedBox(height: 14),
+                          SizedBox(height: 14),
                         ],
                         Text(
                           'Hello, ${model.account?.name.split(' ').first ?? ''}',
-                          style: const TextStyle(color: brandMuted),
+                          style: TextStyle(
+                            color: mhpColor(context, brandMuted),
+                          ),
                         ),
-                        const SizedBox(height: 3),
+                        SizedBox(height: 3),
                         Row(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
@@ -258,11 +264,11 @@ class _HoursScreenState extends State<HoursScreen> with WidgetsBindingObserver {
                                     tab == 1 ? 'Your hours' : 'Your week',
                                     style: titleStyle,
                                   ),
-                                  const SizedBox(height: 3),
+                                  SizedBox(height: 3),
                                   Text(
                                     weekLabel(shownWeek),
-                                    style: const TextStyle(
-                                      color: brandMuted,
+                                    style: TextStyle(
+                                      color: mhpColor(context, brandMuted),
                                       fontSize: 15,
                                     ),
                                   ),
@@ -281,8 +287,8 @@ class _HoursScreenState extends State<HoursScreen> with WidgetsBindingObserver {
                                     if (w.targetMinutes > 0)
                                       Text(
                                         'of ${durationLabel(w.targetMinutes)} target',
-                                        style: const TextStyle(
-                                          color: brandMuted,
+                                        style: TextStyle(
+                                          color: mhpColor(context, brandMuted),
                                           fontSize: 12,
                                         ),
                                       ),
@@ -306,11 +312,11 @@ class _HoursScreenState extends State<HoursScreen> with WidgetsBindingObserver {
                                         await model.selectWeek(date);
                                       }
                                     },
-                              icon: const Icon(Icons.calendar_month_outlined),
-                              label: const Text('Choose a date'),
+                              icon: Icon(Icons.calendar_month_outlined),
+                              label: Text('Choose a date'),
                             ),
                           ),
-                        const SizedBox(height: 16),
+                        SizedBox(height: 16),
                         if (shownPage != null && w.targetMinutes > 0)
                           LinearProgressIndicator(
                             value: (shownPage.totalMinutes / w.targetMinutes)
@@ -318,21 +324,24 @@ class _HoursScreenState extends State<HoursScreen> with WidgetsBindingObserver {
                             minHeight: 8,
                             borderRadius: BorderRadius.circular(8),
                             color: brandOrange,
-                            backgroundColor: const Color(0xffeeece9),
+                            backgroundColor: mhpColor(
+                              context,
+                              Color(0xffeeece9),
+                            ),
                           ),
                         if (!w.writable)
-                          const Notice(
+                          Notice(
                             'This workspace is read-only. You can view your hours.',
                           ),
                         ErrorNotice(shownFailure),
                         if (shownLoading)
-                          const Padding(
+                          Padding(
                             padding: EdgeInsets.only(top: 24),
                             child: LoadingCards(),
                           )
                         else if (shownPage != null) ...[
                           if (tab == 0) ...[
-                            const SizedBox(height: 32),
+                            SizedBox(height: 32),
                             WeekChart(
                               week: shownWeek,
                               entries: shownPage.entries,
@@ -348,14 +357,14 @@ class _HoursScreenState extends State<HoursScreen> with WidgetsBindingObserver {
                                     )
                                   : null,
                             ),
-                            const SizedBox(height: 22),
+                            SizedBox(height: 22),
                           ],
                           Row(
                             children: [
                               Expanded(
                                 child: Text(
                                   tab == 0 ? 'Recent entries' : 'This week',
-                                  style: const TextStyle(
+                                  style: TextStyle(
                                     fontSize: 16,
                                     fontWeight: FontWeight.w700,
                                   ),
@@ -369,12 +378,12 @@ class _HoursScreenState extends State<HoursScreen> with WidgetsBindingObserver {
                                       model.selectWeek(model.overviewWeek);
                                     }
                                   },
-                                  child: const Text('See all'),
+                                  child: Text('See all'),
                                 ),
                             ],
                           ),
                           if (shownPage.entries.isEmpty)
-                            const Padding(
+                            Padding(
                               padding: EdgeInsets.symmetric(vertical: 24),
                               child: InfoPanel(
                                 'No hours this week. Add your first working day.',
@@ -388,7 +397,7 @@ class _HoursScreenState extends State<HoursScreen> with WidgetsBindingObserver {
                               entry: e,
                               onTap: w.writable ? () => edit(entry: e) : null,
                             ),
-                            const Divider(),
+                            Divider(),
                           ],
                         ],
                         if (tab == 1 || shownFailure != null)
@@ -400,7 +409,7 @@ class _HoursScreenState extends State<HoursScreen> with WidgetsBindingObserver {
                                 onPressed: shownLoading || tab == 0
                                     ? null
                                     : () => model.moveWeek(-7),
-                                icon: const Icon(Icons.chevron_left),
+                                icon: Icon(Icons.chevron_left),
                               ),
                               TextButton.icon(
                                 onPressed: shownLoading
@@ -408,15 +417,15 @@ class _HoursScreenState extends State<HoursScreen> with WidgetsBindingObserver {
                                     : tab == 0
                                     ? model.reloadOverview
                                     : model.reload,
-                                icon: const Icon(Icons.refresh, size: 18),
-                                label: const Text('Refresh'),
+                                icon: Icon(Icons.refresh, size: 18),
+                                label: Text('Refresh'),
                               ),
                               IconButton(
                                 tooltip: 'Next week',
                                 onPressed: shownLoading || tab == 0
                                     ? null
                                     : () => model.moveWeek(7),
-                                icon: const Icon(Icons.chevron_right),
+                                icon: Icon(Icons.chevron_right),
                               ),
                             ],
                           ),
@@ -454,7 +463,7 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
           IconButton(
             tooltip: 'Sign out',
             onPressed: m.busy ? null : m.logout,
-            icon: const Icon(Icons.logout, size: 21),
+            icon: Icon(Icons.logout, size: 21),
           ),
         ],
       ),
@@ -471,36 +480,42 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
                         builder: (_) => CreateWorkspaceScreen(model: m),
                       ),
                     ),
-              icon: const Icon(Icons.add_circle_outline, color: brandMuted),
-              label: const Text(
+              icon: Icon(
+                Icons.add_circle_outline,
+                color: mhpColor(context, brandMuted),
+              ),
+              label: Text(
                 'Create workspace',
-                style: TextStyle(color: brandInk),
+                style: TextStyle(color: mhpColor(context, brandInk)),
               ),
             ),
-            const SizedBox(height: 20),
+            SizedBox(height: 20),
             FilledButton(
               onPressed: m.busy || selection == null
                   ? null
                   : () => m.selectWorkspace(selection),
-              child: const Text('Continue'),
+              child: Text('Continue'),
             ),
           ],
         ),
         children: [
-          const SizedBox(height: 24),
-          const Text('Choose your workspace', style: titleStyle),
-          const SizedBox(height: 8),
-          const Text(
+          SizedBox(height: 24),
+          Text('Choose your workspace', style: titleStyle),
+          SizedBox(height: 8),
+          Text(
             'Where are you working today?',
-            style: TextStyle(color: brandMuted, fontSize: 16),
+            style: TextStyle(
+              color: mhpColor(context, brandMuted),
+              fontSize: 16,
+            ),
           ),
-          const SizedBox(height: 30),
+          SizedBox(height: 30),
           if (m.busy)
-            const LoadingCards()
+            LoadingCards()
           else
             for (final w in m.workspaces)
               Padding(
-                padding: const EdgeInsets.only(bottom: 16),
+                padding: EdgeInsets.only(bottom: 16),
                 child: Semantics(
                   selected: selection?.id == w.id,
                   button: true,
@@ -509,11 +524,11 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
                     borderRadius: BorderRadius.circular(11),
                     child: Panel(
                       color: selection?.id == w.id
-                          ? const Color(0xfffff0e7)
-                          : const Color(0x99ffffff),
+                          ? mhpColor(context, Color(0xfffff0e7))
+                          : mhpColor(context, Color(0x99ffffff)),
                       borderColor: selection?.id == w.id
                           ? brandOrange
-                          : brandBorder,
+                          : mhpColor(context, brandBorder),
                       child: Row(
                         children: [
                           Container(
@@ -522,47 +537,47 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
                             decoration: BoxDecoration(
                               color: selection?.id == w.id
                                   ? brandOrange
-                                  : const Color(0xffe6e6e7),
+                                  : mhpColor(context, Color(0xffe6e6e7)),
                               borderRadius: BorderRadius.circular(10),
                             ),
                             child: Icon(
                               Icons.business_outlined,
                               color: selection?.id == w.id
                                   ? Colors.white
-                                  : brandMuted,
+                                  : mhpColor(context, brandMuted),
                             ),
                           ),
-                          const SizedBox(width: 16),
+                          SizedBox(width: 16),
                           Expanded(
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
                                   w.name,
-                                  style: const TextStyle(
+                                  style: TextStyle(
                                     fontWeight: FontWeight.w700,
                                     fontSize: 16,
                                   ),
                                 ),
-                                const SizedBox(height: 4),
+                                SizedBox(height: 4),
                                 Text(
                                   '${capitalized(w.role)}${w.currency == null ? '' : ' · ${w.currency}'}${w.writable ? '' : ' · Read-only'}',
-                                  style: const TextStyle(
+                                  style: TextStyle(
                                     fontSize: 14,
-                                    color: brandMuted,
+                                    color: mhpColor(context, brandMuted),
                                   ),
                                 ),
                               ],
                             ),
                           ),
-                          const SizedBox(width: 8),
+                          SizedBox(width: 8),
                           Icon(
                             selection?.id == w.id
                                 ? Icons.check_circle
                                 : Icons.radio_button_unchecked,
                             color: selection?.id == w.id
                                 ? brandOrange
-                                : brandMuted,
+                                : mhpColor(context, brandMuted),
                             size: 23,
                           ),
                         ],
@@ -572,7 +587,7 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
                 ),
               ),
           if (!m.busy && m.workspaces.isEmpty && m.failure == null)
-            const InfoPanel(
+            InfoPanel(
               'Your workspace starts here. Create one to begin recording your hours.',
             ),
           ErrorNotice(m.failure),
@@ -580,7 +595,7 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
           if (m.failure != null)
             TextButton(
               onPressed: m.busy ? null : m.refreshAccount,
-              child: const Text('Try again'),
+              child: Text('Try again'),
             ),
         ],
       ),
@@ -664,7 +679,7 @@ class _CreateWorkspaceScreenState extends State<CreateWorkspaceScreen> {
   Widget build(BuildContext context) => ListenableBuilder(
     listenable: widget.model,
     builder: (context, _) => Scaffold(
-      appBar: AppBar(title: const Text('Create workspace')),
+      appBar: AppBar(title: Text('Create workspace')),
       body: Form(
         key: form,
         child: PageBody(
@@ -680,13 +695,13 @@ class _CreateWorkspaceScreenState extends State<CreateWorkspaceScreen> {
               (target, 'Weekly target (hours)', 'weekly_target_minutes'),
             ])
               Padding(
-                padding: const EdgeInsets.only(bottom: 20),
+                padding: EdgeInsets.only(bottom: 20),
                 child: TextFormField(
                   controller: item.$1,
                   enabled: !widget.model.busy && !uncertain,
                   decoration: InputDecoration(labelText: item.$2),
                   keyboardType: item.$1 == target
-                      ? const TextInputType.numberWithOptions(decimal: true)
+                      ? TextInputType.numberWithOptions(decimal: true)
                       : item.$1 == breaks
                       ? TextInputType.number
                       : TextInputType.text,
@@ -695,7 +710,7 @@ class _CreateWorkspaceScreenState extends State<CreateWorkspaceScreen> {
                 ),
               ),
             SwitchListTile(
-              title: const Text('Paid break by default'),
+              title: Text('Paid break by default'),
               value: paid,
               onChanged: widget.model.busy || uncertain
                   ? null
@@ -703,7 +718,7 @@ class _CreateWorkspaceScreenState extends State<CreateWorkspaceScreen> {
             ),
             ErrorNotice(widget.model.failure),
             if (uncertain)
-              const Notice(
+              Notice(
                 'The request may have succeeded. Return to workspaces and reload before creating another.',
               ),
           ],

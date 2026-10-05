@@ -66,7 +66,7 @@ class _EditHoursScreenState extends State<EditHoursScreen> {
     } catch (_) {
       if (mounted) {
         setState(
-          () => projectFailure = const ApiFailure(
+          () => projectFailure = ApiFailure(
             'invalid_response',
             'Could not read projects. Please try again.',
           ),
@@ -116,7 +116,7 @@ class _EditHoursScreenState extends State<EditHoursScreen> {
       if (mounted) {
         setState(() {
           failure = e.status == 404 && existing != null
-              ? const ApiFailure(
+              ? ApiFailure(
                   'entry_unavailable',
                   'This entry is unavailable for editing. Refresh your week; if it remains, contact support.',
                   status: 404,
@@ -141,7 +141,7 @@ class _EditHoursScreenState extends State<EditHoursScreen> {
     } catch (_) {
       if (mounted) {
         setState(
-          () => failure = const ApiFailure(
+          () => failure = ApiFailure(
             'invalid_response',
             'Save could not be confirmed. Reload your week before making a new change.',
           ),
@@ -163,7 +163,7 @@ class _EditHoursScreenState extends State<EditHoursScreen> {
     } catch (_) {
       if (mounted) {
         setState(
-          () => failure = const ApiFailure(
+          () => failure = ApiFailure(
             'invalid_response',
             'Could not read the server’s hours response.',
           ),
@@ -182,18 +182,18 @@ class _EditHoursScreenState extends State<EditHoursScreen> {
     final replace = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        title: const Text('Use the server version?'),
-        content: const Text(
+        title: Text('Use the server version?'),
+        content: Text(
           'This replaces the unsaved values in this form. Nothing will be saved automatically.',
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(dialogContext, false),
-            child: const Text('Keep my draft'),
+            child: Text('Keep my draft'),
           ),
           FilledButton(
             onPressed: () => Navigator.pop(dialogContext, true),
-            child: const Text('Load latest'),
+            child: Text('Load latest'),
           ),
         ],
       ),
@@ -241,15 +241,15 @@ class _EditHoursScreenState extends State<EditHoursScreen> {
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label, style: const TextStyle(fontSize: 14)),
-        const SizedBox(height: 8),
+        Text(label, style: TextStyle(fontSize: 14)),
+        SizedBox(height: 8),
         TextFormField(
           controller: controller,
           readOnly: true,
           onTap: saving ? null : () => pickTime(controller),
-          style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w700),
+          style: TextStyle(fontSize: 22, fontWeight: FontWeight.w700),
           decoration: InputDecoration(
-            prefixIcon: const Icon(Icons.schedule),
+            prefixIcon: Icon(Icons.schedule),
             semanticCounterText: label,
           ),
           validator: (_) => fields[key],
@@ -285,7 +285,7 @@ class _EditHoursScreenState extends State<EditHoursScreen> {
             : SafeArea(
                 top: false,
                 child: Padding(
-                  padding: const EdgeInsets.fromLTRB(22, 12, 22, 16),
+                  padding: EdgeInsets.fromLTRB(22, 12, 22, 16),
                   child: saveAction,
                 ),
               ),
@@ -305,12 +305,12 @@ class _EditHoursScreenState extends State<EditHoursScreen> {
                   CheckedPopupMenuItem(
                     value: true,
                     checked: billable,
-                    child: const Text('Billable'),
+                    child: Text('Billable'),
                   ),
                   CheckedPopupMenuItem(
                     value: false,
                     checked: !billable,
-                    child: const Text('Not billable'),
+                    child: Text('Not billable'),
                   ),
                 ],
               ),
@@ -319,14 +319,14 @@ class _EditHoursScreenState extends State<EditHoursScreen> {
         body: Form(
           key: form,
           child: PageBody(
-            padding: const EdgeInsets.fromLTRB(22, 8, 22, 16),
+            padding: EdgeInsets.fromLTRB(22, 8, 22, 16),
             footer: keyboardOpen ? saveAction : null,
             children: [
               TextButton.icon(
                 style: TextButton.styleFrom(
                   alignment: Alignment.centerLeft,
                   padding: EdgeInsets.zero,
-                  foregroundColor: brandInk,
+                  foregroundColor: mhpColor(context, brandInk),
                 ),
                 onPressed: saving
                     ? null
@@ -339,7 +339,7 @@ class _EditHoursScreenState extends State<EditHoursScreen> {
                         );
                         if (d != null) setState(() => date = d);
                       },
-                icon: const Icon(Icons.calendar_today_outlined),
+                icon: Icon(Icons.calendar_today_outlined),
                 label: Text(
                   '${['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'][date.weekday - 1]}, ${shortDate(date)}',
                 ),
@@ -349,32 +349,32 @@ class _EditHoursScreenState extends State<EditHoursScreen> {
                   fields['work_date']!,
                   style: TextStyle(color: Theme.of(context).colorScheme.error),
                 ),
-              const SizedBox(height: 16),
+              SizedBox(height: 16),
               Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   timeField(start, 'Start time', 'start_time'),
-                  const SizedBox(width: 16),
+                  SizedBox(width: 16),
                   timeField(end, 'End time', 'end_time'),
                 ],
               ),
-              const SizedBox(height: 16),
-              const Text('Break', style: TextStyle(fontSize: 14)),
-              const SizedBox(height: 8),
+              SizedBox(height: 16),
+              Text('Break', style: TextStyle(fontSize: 14)),
+              SizedBox(height: 8),
               TextFormField(
                 controller: breaks,
                 enabled: !saving,
                 keyboardType: TextInputType.number,
-                decoration: const InputDecoration(
+                decoration: InputDecoration(
                   prefixIcon: Icon(Icons.coffee_outlined),
                   suffixText: 'min',
                 ),
                 onChanged: (_) => setState(() {}),
                 validator: (_) => fields['break_minutes'],
               ),
-              const SizedBox(height: 16),
-              const Text('Paid / Unpaid', style: TextStyle(fontSize: 14)),
-              const SizedBox(height: 8),
+              SizedBox(height: 16),
+              Text('Paid / Unpaid', style: TextStyle(fontSize: 14)),
+              SizedBox(height: 8),
               Row(
                 children: [
                   for (final value in [true, false])
@@ -383,12 +383,14 @@ class _EditHoursScreenState extends State<EditHoursScreen> {
                         selected: paid == value,
                         child: OutlinedButton(
                           style: OutlinedButton.styleFrom(
-                            foregroundColor: brandInk,
+                            foregroundColor: mhpColor(context, brandInk),
                             backgroundColor: paid == value
-                                ? brandPeach
-                                : const Color(0xfff0eeeb),
+                                ? mhpColor(context, brandPeach)
+                                : mhpColor(context, Color(0xfff0eeeb)),
                             side: BorderSide(
-                              color: paid == value ? brandOrange : brandBorder,
+                              color: paid == value
+                                  ? brandOrange
+                                  : mhpColor(context, brandBorder),
                             ),
                           ),
                           onPressed: saving
@@ -401,25 +403,22 @@ class _EditHoursScreenState extends State<EditHoursScreen> {
                 ],
               ),
               if (workspace.projectsEnabled) ...[
-                const SizedBox(height: 16),
-                const Text(
-                  'Project (optional)',
-                  style: TextStyle(fontSize: 14),
-                ),
-                const SizedBox(height: 8),
-                if (projectsLoading) const LinearProgressIndicator(),
+                SizedBox(height: 16),
+                Text('Project (optional)', style: TextStyle(fontSize: 14)),
+                SizedBox(height: 8),
+                if (projectsLoading) LinearProgressIndicator(),
                 ErrorNotice(projectFailure),
                 if (projectFailure != null)
                   TextButton(
                     onPressed: loadProjects,
-                    child: const Text('Reload projects'),
+                    child: Text('Reload projects'),
                   ),
                 DropdownButtonFormField<int>(
                   key: ValueKey(projectId),
                   initialValue: projectId,
                   isExpanded: true,
                   decoration: InputDecoration(
-                    prefixIcon: const Icon(Icons.folder_outlined),
+                    prefixIcon: Icon(Icons.folder_outlined),
                     errorText: fields['project_id'],
                   ),
                   items: [
@@ -431,7 +430,7 @@ class _EditHoursScreenState extends State<EditHoursScreen> {
                         !projects.any((p) => p.id == projectId))
                       DropdownMenuItem(
                         value: projectId,
-                        child: const Text('Current project (unavailable)'),
+                        child: Text('Current project (unavailable)'),
                       ),
                     for (final p in projects)
                       DropdownMenuItem(
@@ -444,54 +443,54 @@ class _EditHoursScreenState extends State<EditHoursScreen> {
                       : (v) => setState(() => projectId = v),
                 ),
               ],
-              const SizedBox(height: 16),
-              const Text('Notes (optional)', style: TextStyle(fontSize: 14)),
-              const SizedBox(height: 8),
+              SizedBox(height: 16),
+              Text('Notes (optional)', style: TextStyle(fontSize: 14)),
+              SizedBox(height: 8),
               TextFormField(
                 controller: notes,
                 enabled: !saving,
                 maxLength: 500,
                 minLines: 1,
                 maxLines: 3,
-                decoration: const InputDecoration(
+                decoration: InputDecoration(
                   hintText: 'Add a note…',
                   prefixIcon: Icon(Icons.description_outlined),
                   counterText: '',
                 ),
                 validator: (_) => fields['notes'],
               ),
-              const SizedBox(height: 18),
+              SizedBox(height: 18),
               Panel(
-                color: brandPeach,
-                borderColor: brandPeach,
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 12,
-                ),
+                color: mhpColor(context, brandPeach),
+                borderColor: mhpColor(context, brandPeach),
+                padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text('Total hours', style: TextStyle(fontSize: 14)),
+                    Text('Total hours', style: TextStyle(fontSize: 14)),
                     Text(
                       durationLabel(total),
                       style: totalStyle.copyWith(fontSize: 32),
                     ),
-                    const Text(
+                    Text(
                       'Preview · confirmed when saved',
-                      style: TextStyle(fontSize: 11, color: brandMuted),
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: mhpColor(context, brandMuted),
+                      ),
                     ),
                   ],
                 ),
               ),
               ErrorNotice(failure),
               if (failure?.uncertain == true)
-                const Notice(
+                Notice(
                   'Save is not confirmed. Retry unchanged values, or return to the week and refresh first.',
                 ),
               if (conflict)
                 OutlinedButton(
                   onPressed: reloadConflict,
-                  child: const Text('Reload server version'),
+                  child: Text('Reload server version'),
                 ),
             ],
           ),

@@ -72,9 +72,12 @@ class _LoginScreenState extends State<LoginScreen> {
             alignment: WrapAlignment.center,
             crossAxisAlignment: WrapCrossAlignment.center,
             children: [
-              const Text(
+              Text(
                 'Don’t have an account?',
-                style: TextStyle(color: brandMuted, fontSize: 14),
+                style: TextStyle(
+                  color: mhpColor(context, brandMuted),
+                  fontSize: 14,
+                ),
               ),
               TextButton(
                 onPressed: model.busy || preparing
@@ -84,12 +87,12 @@ class _LoginScreenState extends State<LoginScreen> {
                         model.failure = null;
                         signup = true;
                       }),
-                child: const Text('Create account'),
+                child: Text('Create account'),
               ),
             ],
           ),
           children: [
-            const SizedBox(height: 24),
+            SizedBox(height: 24),
             Center(
               child: Image.asset(
                 'assets/brand/brand-mark.png',
@@ -98,37 +101,37 @@ class _LoginScreenState extends State<LoginScreen> {
                 semanticLabel: 'MyHoursPay',
               ),
             ),
-            const SizedBox(height: 8),
+            SizedBox(height: 8),
             Text(
               'MyHoursPay',
               textAlign: TextAlign.center,
               style: Theme.of(context).textTheme.headlineMedium,
             ),
-            const SizedBox(height: 30),
+            SizedBox(height: 30),
             Text(
               'Your time. In order.',
               textAlign: TextAlign.center,
               style: Theme.of(context).textTheme.headlineLarge,
             ),
-            const SizedBox(height: 8),
-            const Text('Welcome back.', textAlign: TextAlign.center),
-            const SizedBox(height: 28),
+            SizedBox(height: 8),
+            Text('Welcome back.', textAlign: TextAlign.center),
+            SizedBox(height: 28),
             TextFormField(
               controller: email,
               enabled: !model.busy,
               autocorrect: false,
               keyboardType: TextInputType.emailAddress,
-              autofillHints: const [AutofillHints.email],
+              autofillHints: [AutofillHints.email],
               decoration: InputDecoration(
                 labelText: 'Email address',
-                prefixIcon: const Icon(Icons.mail_outline),
+                prefixIcon: Icon(Icons.mail_outline),
                 errorText: model.failure?.fields['email']?.firstOrNull,
               ),
               validator: (v) => v == null || !v.contains('@')
                   ? 'Enter your email address.'
                   : null,
             ),
-            const SizedBox(height: 16),
+            SizedBox(height: 16),
             TextFormField(
               controller: password,
               enabled: !model.busy,
@@ -138,7 +141,7 @@ class _LoginScreenState extends State<LoginScreen> {
               autofillHints: [AutofillHints.password],
               decoration: InputDecoration(
                 labelText: 'Password',
-                prefixIcon: const Icon(Icons.lock_outline),
+                prefixIcon: Icon(Icons.lock_outline),
                 errorText: model.failure?.fields['password']?.firstOrNull,
                 suffixIcon: IconButton(
                   tooltip: hidden ? 'Show password' : 'Hide password',
@@ -158,7 +161,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   ? 'Your session has expired. Please sign in again.'
                   : model.notice,
             ),
-            const SizedBox(height: 12),
+            SizedBox(height: 12),
             FilledButton(
               onPressed: model.busy || preparing ? null : submit,
               child: Text(model.busy || preparing ? 'Signing in…' : 'Sign in'),
@@ -173,34 +176,37 @@ class _LoginScreenState extends State<LoginScreen> {
                         initialEmail: email.text,
                       ),
                     ),
-              child: const Text('Forgot password?'),
+              child: Text('Forgot password?'),
             ),
             if (widget.providerActions.keys.any(
               (p) => model.providers[p] == true,
             )) ...[
-              const SizedBox(height: 18),
-              const Row(
+              SizedBox(height: 18),
+              Row(
                 children: [
                   Expanded(child: Divider()),
                   Padding(
                     padding: EdgeInsets.symmetric(horizontal: 12),
                     child: Text(
                       'or continue with',
-                      style: TextStyle(fontSize: 13, color: brandMuted),
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: mhpColor(context, brandMuted),
+                      ),
                     ),
                   ),
                   Expanded(child: Divider()),
                 ],
               ),
-              const SizedBox(height: 20),
+              SizedBox(height: 20),
               for (final provider in ['google', 'apple'])
                 if (model.providers[provider] == true &&
                     widget.providerActions.containsKey(provider))
                   Padding(
-                    padding: const EdgeInsets.only(bottom: 12),
+                    padding: EdgeInsets.only(bottom: 12),
                     child: OutlinedButton.icon(
                       style: OutlinedButton.styleFrom(
-                        backgroundColor: Colors.white,
+                        backgroundColor: mhpColor(context, Colors.white),
                       ),
                       onPressed: model.busy
                           ? null
@@ -218,7 +224,7 @@ class _LoginScreenState extends State<LoginScreen> {
                             ),
                       label: Text(
                         'Continue with ${provider == 'google' ? 'Google' : 'Apple'}',
-                        style: const TextStyle(color: brandInk),
+                        style: TextStyle(color: mhpColor(context, brandInk)),
                       ),
                     ),
                   ),
@@ -269,7 +275,7 @@ class _ChallengeScreenState extends State<ChallengeScreen> {
       appBar: AppBar(
         leading: IconButton(
           tooltip: 'Return to sign in',
-          icon: const Icon(Icons.arrow_back),
+          icon: Icon(Icons.arrow_back),
           onPressed: model.busy
               ? null
               : widget.emailVerification
@@ -300,17 +306,17 @@ class _ChallengeScreenState extends State<ChallengeScreen> {
                     : 'Verify and continue',
               ),
             ),
-            const SizedBox(height: 8),
+            SizedBox(height: 8),
             widget.emailVerification
                 ? TextButton(
                     onPressed: model.busy ? null : model.resend,
-                    child: const Text('Resend code'),
+                    child: Text('Resend code'),
                   )
                 : toggle,
           ],
         ),
         children: [
-          const SizedBox(height: 56),
+          SizedBox(height: 56),
           Icon(
             widget.emailVerification
                 ? Icons.mark_email_read_outlined
@@ -318,13 +324,13 @@ class _ChallengeScreenState extends State<ChallengeScreen> {
             size: 76,
             color: brandOrange,
           ),
-          const SizedBox(height: 30),
+          SizedBox(height: 30),
           Text(
             widget.emailVerification ? 'Verify your email' : 'One more step',
             style: titleStyle,
             textAlign: TextAlign.center,
           ),
-          const SizedBox(height: 10),
+          SizedBox(height: 10),
           Text(
             widget.emailVerification
                 ? 'Enter the 6-digit code sent to ${model.account?.email ?? 'your email'}.'
@@ -332,16 +338,19 @@ class _ChallengeScreenState extends State<ChallengeScreen> {
                 ? 'Enter one of your unused recovery codes.'
                 : 'Enter the 6-digit code from your authenticator app.',
             textAlign: TextAlign.center,
-            style: const TextStyle(color: brandMuted, fontSize: 16),
+            style: TextStyle(
+              color: mhpColor(context, brandMuted),
+              fontSize: 16,
+            ),
           ),
-          const SizedBox(height: 44),
+          SizedBox(height: 44),
           if (recovery)
             TextField(
               controller: code,
               enabled: !model.busy,
               autocorrect: false,
               enableSuggestions: false,
-              decoration: const InputDecoration(labelText: 'Recovery code'),
+              decoration: InputDecoration(labelText: 'Recovery code'),
             )
           else
             CodeInput(controller: code, enabled: !model.busy),
@@ -379,14 +388,14 @@ class CodeInput extends StatelessWidget {
                             color: Colors.white.withValues(alpha: .5),
                             border: Border.all(
                               color: value.text.length == i
-                                  ? brandMuted
-                                  : brandBorder,
+                                  ? mhpColor(context, brandMuted)
+                                  : mhpColor(context, brandBorder),
                             ),
                             borderRadius: BorderRadius.circular(10),
                           ),
                           child: Text(
                             i < value.text.length ? value.text[i] : '',
-                            style: const TextStyle(fontSize: 24),
+                            style: TextStyle(fontSize: 24),
                           ),
                         ),
                       ),
@@ -401,16 +410,16 @@ class CodeInput extends StatelessWidget {
             controller: controller,
             enabled: enabled,
             keyboardType: TextInputType.number,
-            autofillHints: const [AutofillHints.oneTimeCode],
+            autofillHints: [AutofillHints.oneTimeCode],
             inputFormatters: [
               FilteringTextInputFormatter.digitsOnly,
               LengthLimitingTextInputFormatter(6),
             ],
-            style: const TextStyle(color: Colors.transparent),
+            style: TextStyle(color: Colors.transparent),
             cursorColor: Colors.transparent,
             showCursor: false,
             enableSuggestions: false,
-            decoration: const InputDecoration(
+            decoration: InputDecoration(
               labelText: 'Verification code',
               floatingLabelBehavior: FloatingLabelBehavior.never,
               labelStyle: TextStyle(color: Colors.transparent),
@@ -452,7 +461,7 @@ class _ForgotPasswordDialogState extends State<ForgotPasswordDialog> {
 
   @override
   Widget build(BuildContext context) => AlertDialog(
-    title: const Text('Reset password'),
+    title: Text('Reset password'),
     content: Form(
       key: form,
       child: SingleChildScrollView(
@@ -460,16 +469,16 @@ class _ForgotPasswordDialogState extends State<ForgotPasswordDialog> {
           mainAxisSize: MainAxisSize.min,
           children: [
             if (sent)
-              const Text(
+              Text(
                 'If the account exists, a reset link has been sent. Complete the reset using the secure page in the email.',
               )
             else
               TextFormField(
                 controller: email,
                 enabled: !busy,
-                autofillHints: const [AutofillHints.email],
+                autofillHints: [AutofillHints.email],
                 keyboardType: TextInputType.emailAddress,
-                decoration: const InputDecoration(labelText: 'Email address'),
+                decoration: InputDecoration(labelText: 'Email address'),
                 validator: (value) =>
                     RegExp(r'^[^\s@]+@[^\s@]+\.[^\s@]+$')
                         .hasMatch(value?.trim() ?? '')
@@ -477,10 +486,10 @@ class _ForgotPasswordDialogState extends State<ForgotPasswordDialog> {
                     : 'Enter a valid email address.',
               ),
             if (busy) ...[
-              const SizedBox(height: 16),
-              const LinearProgressIndicator(),
-              const SizedBox(height: 8),
-              const Text('Requesting a reset link…'),
+              SizedBox(height: 16),
+              LinearProgressIndicator(),
+              SizedBox(height: 8),
+              Text('Requesting a reset link…'),
             ],
             if (error != null) Text(error!),
           ],
@@ -510,7 +519,7 @@ class _ForgotPasswordDialogState extends State<ForgotPasswordDialog> {
                       Navigator.pop(context);
                       messenger.hideCurrentSnackBar();
                       messenger.showSnackBar(
-                        const SnackBar(
+                        SnackBar(
                           content: Text(
                             'If the account exists, a reset link has been sent. Check your email.',
                           ),

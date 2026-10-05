@@ -83,7 +83,7 @@ class _SignupScreenState extends State<SignupScreen> {
     } catch (_) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
+          SnackBar(
             content: Text(
               'Could not open this page. Please read it on the MyHoursPay website.',
             ),
@@ -152,7 +152,7 @@ class _SignupScreenState extends State<SignupScreen> {
   }) {
     final masked = confirm ? confirmationHidden : hidden;
     return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
+      padding: EdgeInsets.only(bottom: 12),
       child: TextFormField(
         key: ValueKey('signup-$keyName'),
         controller: controller,
@@ -230,18 +230,21 @@ class _SignupScreenState extends State<SignupScreen> {
           child: Form(
             key: form,
             child: PageBody(
-              padding: const EdgeInsets.fromLTRB(22, 8, 22, 22),
+              padding: EdgeInsets.fromLTRB(22, 8, 22, 22),
               footer: Wrap(
                 alignment: WrapAlignment.center,
                 crossAxisAlignment: WrapCrossAlignment.center,
                 children: [
-                  const Text(
+                  Text(
                     'Already have an account?',
-                    style: TextStyle(fontSize: 14, color: brandMuted),
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: mhpColor(context, brandMuted),
+                    ),
                   ),
                   TextButton(
                     onPressed: pending ? null : widget.onSignIn,
-                    child: const Text('Sign in'),
+                    child: Text('Sign in'),
                   ),
                 ],
               ),
@@ -258,8 +261,8 @@ class _SignupScreenState extends State<SignupScreen> {
                             semanticLabel: 'MyHoursPay',
                           ),
                         ),
-                        const SizedBox(height: 7),
-                        const Text(
+                        SizedBox(height: 7),
+                        Text(
                           'MyHoursPay',
                           textAlign: TextAlign.center,
                           style: titleStyle,
@@ -272,24 +275,30 @@ class _SignupScreenState extends State<SignupScreen> {
                       child: IconButton(
                         tooltip: 'Return to sign in',
                         onPressed: pending ? null : widget.onSignIn,
-                        icon: const Icon(Icons.arrow_back, color: brandInk),
+                        icon: Icon(
+                          Icons.arrow_back,
+                          color: mhpColor(context, brandInk),
+                        ),
                       ),
                     ),
                   ],
                 ),
-                const SizedBox(height: 26),
-                const Text(
+                SizedBox(height: 26),
+                Text(
                   'Create your account',
                   textAlign: TextAlign.center,
                   style: titleStyle,
                 ),
-                const SizedBox(height: 8),
-                const Text(
+                SizedBox(height: 8),
+                Text(
                   'Keep your working week in order.',
                   textAlign: TextAlign.center,
-                  style: TextStyle(color: brandMuted, fontSize: 15),
+                  style: TextStyle(
+                    color: mhpColor(context, brandMuted),
+                    fontSize: 15,
+                  ),
                 ),
-                const SizedBox(height: 25),
+                SizedBox(height: 25),
                 field(
                   keyName: 'name',
                   controller: name,
@@ -349,19 +358,19 @@ class _SignupScreenState extends State<SignupScreen> {
                               }),
                       ),
                     ),
-                    const SizedBox(width: 6),
+                    SizedBox(width: 6),
                     Expanded(
                       child: Padding(
-                        padding: const EdgeInsets.only(top: 9),
+                        padding: EdgeInsets.only(top: 9),
                         child: Text.rich(
                           TextSpan(
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 14,
                               height: 1.5,
-                              color: brandInk,
+                              color: mhpColor(context, brandInk),
                             ),
                             children: [
-                              const TextSpan(text: 'I agree to the '),
+                              TextSpan(text: 'I agree to the '),
                               WidgetSpan(
                                 alignment: PlaceholderAlignment.baseline,
                                 baseline: TextBaseline.alphabetic,
@@ -369,10 +378,10 @@ class _SignupScreenState extends State<SignupScreen> {
                                   link: true,
                                   child: InkWell(
                                     onTap: () => openLegal('/terms'),
-                                    child: const Text(
+                                    child: Text(
                                       'Terms of Service',
                                       style: TextStyle(
-                                        color: brandAction,
+                                        color: mhpColor(context, brandAction),
                                         fontSize: 14,
                                         fontWeight: FontWeight.w600,
                                       ),
@@ -380,7 +389,7 @@ class _SignupScreenState extends State<SignupScreen> {
                                   ),
                                 ),
                               ),
-                              const TextSpan(text: ' and '),
+                              TextSpan(text: ' and '),
                               WidgetSpan(
                                 alignment: PlaceholderAlignment.baseline,
                                 baseline: TextBaseline.alphabetic,
@@ -388,10 +397,10 @@ class _SignupScreenState extends State<SignupScreen> {
                                   link: true,
                                   child: InkWell(
                                     onTap: () => openLegal('/policy'),
-                                    child: const Text(
+                                    child: Text(
                                       'Privacy Policy',
                                       style: TextStyle(
-                                        color: brandAction,
+                                        color: mhpColor(context, brandAction),
                                         fontSize: 14,
                                         fontWeight: FontWeight.w600,
                                       ),
@@ -399,7 +408,7 @@ class _SignupScreenState extends State<SignupScreen> {
                                   ),
                                 ),
                               ),
-                              const TextSpan(text: '.'),
+                              TextSpan(text: '.'),
                             ],
                           ),
                         ),
@@ -411,15 +420,15 @@ class _SignupScreenState extends State<SignupScreen> {
                   Text(
                     serverError('terms') ??
                         'Please agree to the terms and privacy policy.',
-                    style: const TextStyle(
-                      color: Color(0xffb3261e),
+                    style: TextStyle(
+                      color: mhpColor(context, Color(0xffb3261e)),
                       fontSize: 12,
                     ),
                   ),
                 CheckboxListTile(
                   contentPadding: EdgeInsets.zero,
                   controlAffinity: ListTileControlAffinity.leading,
-                  title: const Text(
+                  title: Text(
                     'Send me offers and product news (optional)',
                     style: TextStyle(fontSize: 13),
                   ),
@@ -431,41 +440,49 @@ class _SignupScreenState extends State<SignupScreen> {
                 if (serverError('marketing_consent') != null)
                   Text(
                     serverError('marketing_consent')!,
-                    style: const TextStyle(color: Color(0xffb3261e)),
+                    style: TextStyle(
+                      color: mhpColor(context, Color(0xffb3261e)),
+                    ),
                   ),
                 ErrorNotice(model.failure),
-                const SizedBox(height: 12),
+                SizedBox(height: 12),
                 FilledButton(
                   onPressed: pending ? null : submit,
                   child: Text(pending ? 'Creating account…' : 'Create account'),
                 ),
                 if (enabledProviders.isNotEmpty) ...[
-                  const SizedBox(height: 20),
-                  const Row(
+                  SizedBox(height: 20),
+                  Row(
                     children: [
                       Expanded(child: Divider()),
                       Padding(
                         padding: EdgeInsets.symmetric(horizontal: 12),
                         child: Text(
                           'or continue with',
-                          style: TextStyle(color: brandMuted, fontSize: 13),
+                          style: TextStyle(
+                            color: mhpColor(context, brandMuted),
+                            fontSize: 13,
+                          ),
                         ),
                       ),
                       Expanded(child: Divider()),
                     ],
                   ),
-                  const SizedBox(height: 18),
+                  SizedBox(height: 18),
                   if (enabledProviders.contains('google'))
-                    const Padding(
+                    Padding(
                       padding: EdgeInsets.only(bottom: 12),
                       child: Text(
                         'Google supplies your name and email. Accept the terms to continue; no form fields are required.\n\nPromotional consent above applies to email/password registration only. Google registration does not save that preference.',
-                        style: TextStyle(color: brandMuted, fontSize: 12),
+                        style: TextStyle(
+                          color: mhpColor(context, brandMuted),
+                          fontSize: 12,
+                        ),
                       ),
                     ),
                   for (final provider in enabledProviders)
                     Padding(
-                      padding: const EdgeInsets.only(bottom: 12),
+                      padding: EdgeInsets.only(bottom: 12),
                       child: OutlinedButton.icon(
                         onPressed: pending ? null : () => social(provider),
                         icon: Image.asset(
@@ -475,7 +492,7 @@ class _SignupScreenState extends State<SignupScreen> {
                         ),
                         label: Text(
                           'Continue with ${provider == 'google' ? 'Google' : 'Apple'}',
-                          style: const TextStyle(color: brandInk),
+                          style: TextStyle(color: mhpColor(context, brandInk)),
                         ),
                       ),
                     ),

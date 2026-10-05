@@ -9,7 +9,7 @@ class BrandedLoadingScreen extends StatelessWidget {
     body: SafeArea(
       child: Center(
         child: Padding(
-          padding: const EdgeInsets.all(24),
+          padding: EdgeInsets.all(24),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -19,27 +19,30 @@ class BrandedLoadingScreen extends StatelessWidget {
                 height: 132,
                 excludeFromSemantics: true,
               ),
-              const SizedBox(height: 18),
-              const Text(
+              SizedBox(height: 18),
+              Text(
                 'MyHoursPay',
                 style: titleStyle,
                 textAlign: TextAlign.center,
               ),
-              const SizedBox(height: 9),
-              const Text(
+              SizedBox(height: 9),
+              Text(
                 'Your time. In order.',
-                style: TextStyle(fontSize: 16, color: brandMuted),
+                style: TextStyle(
+                  fontSize: 16,
+                  color: mhpColor(context, brandMuted),
+                ),
                 textAlign: TextAlign.center,
               ),
-              const SizedBox(height: 36),
+              SizedBox(height: 36),
               Semantics(
                 label: 'Loading MyHoursPay',
-                child: const SizedBox(
+                child: SizedBox(
                   width: 96,
                   child: LinearProgressIndicator(
                     minHeight: 3,
                     color: brandOrange,
-                    backgroundColor: brandPeach,
+                    backgroundColor: mhpColor(context, brandPeach),
                   ),
                 ),
               ),

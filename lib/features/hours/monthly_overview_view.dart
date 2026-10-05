@@ -33,10 +33,10 @@ class OverviewPeriodSwitch extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Container(
     decoration: BoxDecoration(
-      border: Border.all(color: brandBorder),
+      border: Border.all(color: mhpColor(context, brandBorder)),
       borderRadius: BorderRadius.circular(12),
     ),
-    padding: const EdgeInsets.all(3),
+    padding: EdgeInsets.all(3),
     child: Row(
       children: [
         for (final month in [false, true])
@@ -47,11 +47,11 @@ class OverviewPeriodSwitch extends StatelessWidget {
                 onTap: () => model.setOverviewMonthly(month),
                 borderRadius: BorderRadius.circular(9),
                 child: Container(
-                  constraints: const BoxConstraints(minHeight: 48),
+                  constraints: BoxConstraints(minHeight: 48),
                   alignment: Alignment.center,
                   decoration: BoxDecoration(
                     color: model.overviewMonthly == month
-                        ? brandPeach
+                        ? mhpColor(context, brandPeach)
                         : Colors.transparent,
                     borderRadius: BorderRadius.circular(9),
                   ),
@@ -61,7 +61,7 @@ class OverviewPeriodSwitch extends StatelessWidget {
                       fontWeight: model.overviewMonthly == month
                           ? FontWeight.w700
                           : FontWeight.w400,
-                      color: brandInk,
+                      color: mhpColor(context, brandInk),
                     ),
                   ),
                 ),
@@ -107,9 +107,9 @@ class MonthlyOverviewView extends StatelessWidget {
       child: RefreshIndicator(
         onRefresh: state.refresh,
         child: SingleChildScrollView(
-          key: const PageStorageKey('monthly-overview-scroll'),
-          physics: const AlwaysScrollableScrollPhysics(),
-          padding: const EdgeInsets.fromLTRB(22, 16, 22, 24),
+          key: PageStorageKey('monthly-overview-scroll'),
+          physics: AlwaysScrollableScrollPhysics(),
+          padding: EdgeInsets.fromLTRB(22, 16, 22, 24),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
@@ -120,7 +120,7 @@ class MonthlyOverviewView extends StatelessWidget {
                       onTap: model.switchWorkspace,
                       borderRadius: BorderRadius.circular(12),
                       child: Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 8),
+                        padding: EdgeInsets.symmetric(vertical: 8),
                         child: Row(
                           children: [
                             Image.asset(
@@ -128,17 +128,15 @@ class MonthlyOverviewView extends StatelessWidget {
                               width: 36,
                               height: 36,
                             ),
-                            const SizedBox(width: 12),
+                            SizedBox(width: 12),
                             Flexible(
                               child: Text(
                                 workspace.name,
                                 maxLines: 2,
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.w700,
-                                ),
+                                style: TextStyle(fontWeight: FontWeight.w700),
                               ),
                             ),
-                            const Icon(Icons.expand_more, size: 20),
+                            Icon(Icons.expand_more, size: 20),
                           ],
                         ),
                       ),
@@ -155,14 +153,17 @@ class MonthlyOverviewView extends StatelessWidget {
                   ),
                 ],
               ),
-              const SizedBox(height: 16),
-              const Text('Your month', style: titleStyle),
-              const SizedBox(height: 3),
-              const Text(
+              SizedBox(height: 16),
+              Text('Your month', style: titleStyle),
+              SizedBox(height: 3),
+              Text(
                 'Every hour, in view.',
-                style: TextStyle(color: brandMuted, fontSize: 16),
+                style: TextStyle(
+                  color: mhpColor(context, brandMuted),
+                  fontSize: 16,
+                ),
               ),
-              const SizedBox(height: 8),
+              SizedBox(height: 8),
               Row(
                 children: [
                   IconButton(
@@ -170,15 +171,15 @@ class MonthlyOverviewView extends StatelessWidget {
                     onPressed: () => state.selectMonth(
                       DateTime(month.year, month.month - 1),
                     ),
-                    icon: const Icon(Icons.chevron_left),
+                    icon: Icon(Icons.chevron_left),
                   ),
                   Expanded(
                     child: TextButton(
                       onPressed: () => pickMonth(context),
                       child: Text(
                         monthLabel(month),
-                        style: const TextStyle(
-                          color: brandInk,
+                        style: TextStyle(
+                          color: mhpColor(context, brandInk),
                           fontWeight: FontWeight.w600,
                         ),
                       ),
@@ -189,18 +190,18 @@ class MonthlyOverviewView extends StatelessWidget {
                     onPressed: () => state.selectMonth(
                       DateTime(month.year, month.month + 1),
                     ),
-                    icon: const Icon(Icons.chevron_right),
+                    icon: Icon(Icons.chevron_right),
                   ),
                 ],
               ),
               OverviewPeriodSwitch(model: model),
-              const SizedBox(height: 14),
+              SizedBox(height: 14),
               if (!workspace.writable)
-                const InfoPanel(
+                InfoPanel(
                   'This workspace is read-only. You can view entries, but cannot add or change hours.',
                 ),
               if (state.loading)
-                const Padding(
+                Padding(
                   padding: EdgeInsets.only(bottom: 12),
                   child: LinearProgressIndicator(minHeight: 3),
                 ),
@@ -220,10 +221,13 @@ class MonthlyOverviewView extends StatelessWidget {
               if (state.stale &&
                   (totals != null || state.overtimeMinutes != null))
                 Padding(
-                  padding: const EdgeInsets.only(bottom: 12),
+                  padding: EdgeInsets.only(bottom: 12),
                   child: Text(
                     'Showing previously loaded values. ${_updatedLabel(state.snapshot)}',
-                    style: const TextStyle(fontSize: 12, color: brandMuted),
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: mhpColor(context, brandMuted),
+                    ),
                   ),
                 ),
               LayoutBuilder(
@@ -238,8 +242,8 @@ class MonthlyOverviewView extends StatelessWidget {
                           ? 'Refresh to load month hours'
                           : '${totals.workedDays} ${totals.workedDays == 1 ? 'worked day' : 'worked days'}',
                       icon: Icons.schedule,
-                      color: const Color(0xfffff0e5),
-                      ink: brandInk,
+                      color: mhpColor(context, Color(0xfffff0e5)),
+                      ink: mhpColor(context, brandInk),
                     ),
                     _MetricCard(
                       label: 'Overtime',
@@ -248,31 +252,27 @@ class MonthlyOverviewView extends StatelessWidget {
                           : '+${compactHours(state.overtimeMinutes!)}',
                       detail: 'Across full weeks',
                       icon: Icons.bar_chart,
-                      color: const Color(0xffedf6ec),
+                      color: mhpColor(context, Color(0xffedf6ec)),
                       ink: overtimeInk,
                     ),
                   ];
                   if (MediaQuery.textScalerOf(context).scale(1) > 1.35 ||
                       c.maxWidth < 300) {
                     return Column(
-                      children: [
-                        cards[0],
-                        const SizedBox(height: 10),
-                        cards[1],
-                      ],
+                      children: [cards[0], SizedBox(height: 10), cards[1]],
                     );
                   }
                   return Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Expanded(child: cards[0]),
-                      const SizedBox(width: 12),
+                      SizedBox(width: 12),
                       Expanded(child: cards[1]),
                     ],
                   );
                 },
               ),
-              const SizedBox(height: 12),
+              SizedBox(height: 12),
               _Card(
                 child: Wrap(
                   alignment: WrapAlignment.spaceBetween,
@@ -280,7 +280,7 @@ class MonthlyOverviewView extends StatelessWidget {
                   spacing: 20,
                   runSpacing: 8,
                   children: [
-                    const Row(
+                    Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         Icon(Icons.bar_chart, size: 19),
@@ -292,18 +292,18 @@ class MonthlyOverviewView extends StatelessWidget {
                       totals == null
                           ? 'Unavailable'
                           : durationLabel(totals.averageMinutes),
-                      style: const TextStyle(fontWeight: FontWeight.w700),
+                      style: TextStyle(fontWeight: FontWeight.w700),
                     ),
                   ],
                 ),
               ),
-              const SizedBox(height: 14),
+              SizedBox(height: 14),
               _Card(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    const Text('Month at a glance', style: _sectionStyle),
-                    const SizedBox(height: 12),
+                    Text('Month at a glance', style: _sectionStyle),
+                    SizedBox(height: 12),
                     MonthCalendar(
                       month: month,
                       today: workspaceToday(workspace.timezone),
@@ -313,17 +313,20 @@ class MonthlyOverviewView extends StatelessWidget {
                       onSelect: calendarReady ? state.selectDay : null,
                     ),
                     if (totals?.entries.isEmpty == true)
-                      const Padding(
+                      Padding(
                         padding: EdgeInsets.only(top: 12),
                         child: Text(
                           'No hours logged this month. Select a date to add hours.',
-                          style: TextStyle(color: brandMuted, fontSize: 13),
+                          style: TextStyle(
+                            color: mhpColor(context, brandMuted),
+                            fontSize: 13,
+                          ),
                         ),
                       ),
                   ],
                 ),
               ),
-              const SizedBox(height: 12),
+              SizedBox(height: 12),
               _Card(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -335,39 +338,42 @@ class MonthlyOverviewView extends StatelessWidget {
                       children: [
                         Text(
                           '${shortDays[selected.weekday - 1]}, ${shortDate(selected)}',
-                          style: const TextStyle(fontWeight: FontWeight.w700),
+                          style: TextStyle(fontWeight: FontWeight.w700),
                         ),
                         if (entry != null)
                           Text(
                             durationLabel(entry.netMinutes),
-                            style: const TextStyle(fontWeight: FontWeight.w700),
+                            style: TextStyle(fontWeight: FontWeight.w700),
                           ),
                       ],
                     ),
                     if (entry != null) ...[
                       Text(
                         '${entry.start}–${entry.end} · ${entry.breakMinutes}m ${entry.paidBreak ? 'paid' : 'unpaid'} break',
-                        style: const TextStyle(fontSize: 13, color: brandMuted),
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: mhpColor(context, brandMuted),
+                        ),
                       ),
                       Align(
                         alignment: Alignment.centerRight,
                         child: TextButton.icon(
                           onPressed: () => onEntry(entry),
-                          icon: const Icon(Icons.chevron_right, size: 18),
-                          label: const Text('View entry'),
+                          icon: Icon(Icons.chevron_right, size: 18),
+                          label: Text('View entry'),
                         ),
                       ),
                     ] else
                       Padding(
-                        padding: const EdgeInsets.only(top: 6),
+                        padding: EdgeInsets.only(top: 6),
                         child: Text(
                           calendarReady
                               ? (workspace.writable
                                     ? 'No recorded entry. Use Add hours below for this date.'
                                     : 'No recorded entry. This workspace is read-only.')
                               : 'Entry dates are unavailable. Refresh before adding hours.',
-                          style: const TextStyle(
-                            color: brandMuted,
+                          style: TextStyle(
+                            color: mhpColor(context, brandMuted),
                             fontSize: 13,
                           ),
                         ),
@@ -375,28 +381,31 @@ class MonthlyOverviewView extends StatelessWidget {
                   ],
                 ),
               ),
-              const SizedBox(height: 16),
+              SizedBox(height: 16),
               _Card(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    const Text('Weekly breakdown', style: _sectionStyle),
-                    const SizedBox(height: 4),
+                    Text('Weekly breakdown', style: _sectionStyle),
+                    SizedBox(height: 4),
                     Text(
                       workspace.targetMinutes > 0
                           ? '${compactHours(workspace.targetMinutes)} weekly target'
                           : 'Weekly target not set',
-                      style: const TextStyle(color: brandMuted, fontSize: 13),
+                      style: TextStyle(
+                        color: mhpColor(context, brandMuted),
+                        fontSize: 13,
+                      ),
                     ),
                     if (state.snapshot?.fullWeeks == null)
-                      const Padding(
+                      Padding(
                         padding: EdgeInsets.symmetric(vertical: 16),
                         child: Text(
                           'Weekly totals unavailable. Refresh to load them.',
                         ),
                       ),
                     for (var i = 0; i < state.weeks.length; i++) ...[
-                      if (i > 0) const Divider(),
+                      if (i > 0) Divider(),
                       WeeklyBreakdownRow(
                         week: state.weeks[i],
                         scaleMinutes: state.weeks.fold<int>(0, (largest, week) {
@@ -410,19 +419,19 @@ class MonthlyOverviewView extends StatelessWidget {
                   ],
                 ),
               ),
-              const SizedBox(height: 12),
+              SizedBox(height: 12),
               _Card(
-                color: const Color(0xfffff0e5),
+                color: mhpColor(context, Color(0xfffff0e5)),
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Icon(
+                    Icon(
                       Icons.info_outline,
-                      color: brandAction,
+                      color: mhpColor(context, brandAction),
                       size: 22,
                     ),
-                    const SizedBox(width: 12),
-                    const Expanded(
+                    SizedBox(width: 12),
+                    Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
@@ -434,7 +443,7 @@ class MonthlyOverviewView extends StatelessWidget {
                           Text(
                             'Overtime is positive weekly excess across full weeks touching this month, including days outside the month.',
                             style: TextStyle(
-                              color: brandMuted,
+                              color: mhpColor(context, brandMuted),
                               fontSize: 13,
                               height: 1.5,
                             ),
@@ -445,25 +454,25 @@ class MonthlyOverviewView extends StatelessWidget {
                   ],
                 ),
               ),
-              const SizedBox(height: 14),
+              SizedBox(height: 14),
               _Card(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    const Text('Monthly breaks', style: _sectionStyle),
-                    const SizedBox(height: 8),
+                    Text('Monthly breaks', style: _sectionStyle),
+                    SizedBox(height: 8),
                     _BreakRow(
                       'Breaks recorded',
                       totals == null ? 'Unavailable' : '${totals.breakCount}',
                     ),
-                    const Divider(),
+                    Divider(),
                     _BreakRow(
                       'Paid breaks included',
                       totals == null
                           ? 'Unavailable'
                           : compactHours(totals.paidMinutes),
                     ),
-                    const Divider(),
+                    Divider(),
                     _BreakRow(
                       'Unpaid breaks deducted',
                       totals == null
@@ -500,10 +509,12 @@ class _Card extends StatelessWidget {
   final Color color;
   @override
   Widget build(BuildContext context) => Container(
-    padding: const EdgeInsets.all(14),
+    padding: EdgeInsets.all(14),
     decoration: BoxDecoration(
-      color: color,
-      border: Border.all(color: brandBorder.withValues(alpha: .65)),
+      color: mhpColor(context, color),
+      border: Border.all(
+        color: mhpColor(context, brandBorder).withValues(alpha: .65),
+      ),
       borderRadius: BorderRadius.circular(12),
     ),
     child: child,
@@ -524,7 +535,7 @@ class _MetricCard extends StatelessWidget {
   final Color color, ink;
   @override
   Widget build(BuildContext context) => _Card(
-    color: color,
+    color: mhpColor(context, color),
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -533,14 +544,16 @@ class _MetricCard extends StatelessWidget {
           children: [
             Icon(
               icon,
-              color: ink == overtimeInk ? overtimeInk : brandAction,
+              color: ink == overtimeInk
+                  ? overtimeInk
+                  : mhpColor(context, brandAction),
               size: 22,
             ),
-            const SizedBox(width: 8),
-            Expanded(child: Text(label, style: const TextStyle(fontSize: 13))),
+            SizedBox(width: 8),
+            Expanded(child: Text(label, style: TextStyle(fontSize: 13))),
           ],
         ),
-        const SizedBox(height: 7),
+        SizedBox(height: 7),
         Text(
           value,
           style: titleStyle.copyWith(
@@ -549,8 +562,11 @@ class _MetricCard extends StatelessWidget {
             letterSpacing: -.8,
           ),
         ),
-        const SizedBox(height: 4),
-        Text(detail, style: const TextStyle(color: brandMuted, fontSize: 12)),
+        SizedBox(height: 4),
+        Text(
+          detail,
+          style: TextStyle(color: mhpColor(context, brandMuted), fontSize: 12),
+        ),
       ],
     ),
   );
@@ -561,15 +577,15 @@ class _BreakRow extends StatelessWidget {
   final String label, value;
   @override
   Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.symmetric(vertical: 8),
+    padding: EdgeInsets.symmetric(vertical: 8),
     child: Wrap(
       alignment: WrapAlignment.spaceBetween,
       spacing: 16,
       children: [
-        Text(label, style: const TextStyle(fontSize: 13)),
+        Text(label, style: TextStyle(fontSize: 13)),
         Text(
           value,
-          style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+          style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
         ),
       ],
     ),
@@ -589,14 +605,11 @@ class _RangeFailure extends StatelessWidget {
   Widget build(BuildContext context) => Column(
     crossAxisAlignment: CrossAxisAlignment.stretch,
     children: [
-      Text(title, style: const TextStyle(fontWeight: FontWeight.w600)),
+      Text(title, style: TextStyle(fontWeight: FontWeight.w600)),
       ErrorNotice(failure),
       Align(
         alignment: Alignment.centerLeft,
-        child: TextButton(
-          onPressed: onRetry,
-          child: const Text('Refresh month'),
-        ),
+        child: TextButton(onPressed: onRetry, child: Text('Refresh month')),
       ),
     ],
   );
@@ -630,7 +643,7 @@ class MonthCalendar extends StatelessWidget {
       final isToday = dateKey(date) == dateKey(today);
       return Expanded(
         child: Padding(
-          padding: const EdgeInsets.all(1.5),
+          padding: EdgeInsets.all(1.5),
           child: Semantics(
             button: inside && onSelect != null,
             selected: active,
@@ -648,16 +661,19 @@ class MonthCalendar extends StatelessWidget {
               borderRadius: BorderRadius.circular(7),
               child: Container(
                 constraints: BoxConstraints(minHeight: scale > 1.35 ? 76 : 52),
-                padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 1),
+                padding: EdgeInsets.symmetric(vertical: 6, horizontal: 1),
                 decoration: BoxDecoration(
                   color: active
                       ? brandOrange
                       : entry != null
-                      ? const Color(0xffffeee2)
-                      : const Color(0xfff5f3f0),
+                      ? mhpColor(context, Color(0xffffeee2))
+                      : mhpColor(context, Color(0xfff5f3f0)),
                   borderRadius: BorderRadius.circular(7),
                   border: isToday
-                      ? Border.all(color: brandAction, width: 2)
+                      ? Border.all(
+                          color: mhpColor(context, brandAction),
+                          width: 2,
+                        )
                       : null,
                 ),
                 child: Column(
@@ -670,8 +686,11 @@ class MonthCalendar extends StatelessWidget {
                         color: active
                             ? brandInk
                             : inside
-                            ? brandInk
-                            : brandMuted.withValues(alpha: .6),
+                            ? mhpColor(context, brandInk)
+                            : mhpColor(
+                                context,
+                                brandMuted,
+                              ).withValues(alpha: .6),
                         fontWeight: active ? FontWeight.w700 : FontWeight.w400,
                       ),
                     ),
@@ -681,7 +700,9 @@ class MonthCalendar extends StatelessWidget {
                         textAlign: TextAlign.center,
                         style: TextStyle(
                           fontSize: 10,
-                          color: active ? brandInk : brandMuted,
+                          color: active
+                              ? brandInk
+                              : mhpColor(context, brandMuted),
                         ),
                       ),
                   ],
@@ -702,13 +723,16 @@ class MonthCalendar extends StatelessWidget {
                 child: Center(
                   child: Text(
                     day,
-                    style: const TextStyle(color: brandMuted, fontSize: 12),
+                    style: TextStyle(
+                      color: mhpColor(context, brandMuted),
+                      fontSize: 12,
+                    ),
                   ),
                 ),
               ),
           ],
         ),
-        const SizedBox(height: 6),
+        SizedBox(height: 6),
         for (var offset = 0; offset < days.length; offset += 7)
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -751,7 +775,7 @@ class WeeklyBreakdownRow extends StatelessWidget {
     return Semantics(
       label: '${weekLabel(week.start)}, ${compactHours(week.minutes)}, $status',
       child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 12),
+        padding: EdgeInsets.symmetric(vertical: 12),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
@@ -760,17 +784,14 @@ class WeeklyBreakdownRow extends StatelessWidget {
               spacing: 12,
               runSpacing: 4,
               children: [
-                Text(
-                  weekLabel(week.start),
-                  style: const TextStyle(fontSize: 13),
-                ),
+                Text(weekLabel(week.start), style: TextStyle(fontSize: 13)),
                 Text(
                   compactHours(week.minutes),
-                  style: const TextStyle(fontWeight: FontWeight.w700),
+                  style: TextStyle(fontWeight: FontWeight.w700),
                 ),
               ],
             ),
-            const SizedBox(height: 7),
+            SizedBox(height: 7),
             Row(
               children: [
                 Expanded(
@@ -779,7 +800,7 @@ class WeeklyBreakdownRow extends StatelessWidget {
                     child: LayoutBuilder(
                       builder: (_, c) => Container(
                         height: 9,
-                        color: const Color(0xffefeeec),
+                        color: mhpColor(context, Color(0xffefeeec)),
                         child: Row(
                           children: [
                             if (maxMinutes > 0)
@@ -792,7 +813,7 @@ class WeeklyBreakdownRow extends StatelessWidget {
                               Container(
                                 width: c.maxWidth * extra / maxMinutes,
                                 height: 9,
-                                color: overtimeInk,
+                                color: mhpColor(context, overtimeInk),
                               ),
                           ],
                         ),
@@ -800,24 +821,23 @@ class WeeklyBreakdownRow extends StatelessWidget {
                     ),
                   ),
                 ),
-                const SizedBox(width: 12),
+                SizedBox(width: 12),
                 Flexible(
                   child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 10,
-                      vertical: 5,
-                    ),
+                    padding: EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                     decoration: BoxDecoration(
                       color: positive
-                          ? const Color(0xffe1f2e6)
-                          : const Color(0xfff2f1f1),
+                          ? mhpColor(context, Color(0xffe1f2e6))
+                          : mhpColor(context, Color(0xfff2f1f1)),
                       borderRadius: BorderRadius.circular(20),
                     ),
                     child: Text(
                       status,
                       style: TextStyle(
                         fontSize: 11,
-                        color: positive ? overtimeInk : brandMuted,
+                        color: positive
+                            ? overtimeInk
+                            : mhpColor(context, brandMuted),
                         fontWeight: positive
                             ? FontWeight.w600
                             : FontWeight.w400,
@@ -850,13 +870,13 @@ class _MonthPickerState extends State<_MonthPicker> {
         IconButton(
           tooltip: 'Previous year',
           onPressed: year > 1900 ? () => setState(() => year--) : null,
-          icon: const Icon(Icons.chevron_left),
+          icon: Icon(Icons.chevron_left),
         ),
         Expanded(child: Text('$year', textAlign: TextAlign.center)),
         IconButton(
           tooltip: 'Next year',
           onPressed: year < 2200 ? () => setState(() => year++) : null,
-          icon: const Icon(Icons.chevron_right),
+          icon: Icon(Icons.chevron_right),
         ),
       ],
     ),
@@ -883,7 +903,7 @@ class _MonthPickerState extends State<_MonthPicker> {
     actions: [
       TextButton(
         onPressed: () => Navigator.pop(context),
-        child: const Text('Cancel'),
+        child: Text('Cancel'),
       ),
     ],
   );

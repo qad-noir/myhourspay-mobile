@@ -20,7 +20,7 @@ const months = [
 ];
 String shortDate(DateTime d) => '${d.day} ${months[d.month - 1]}';
 String weekLabel(DateTime d) =>
-    '${shortDate(d)} – ${shortDate(d.add(const Duration(days: 6)))}';
+    '${shortDate(d)} – ${shortDate(d.add(Duration(days: 6)))}';
 String capitalized(String s) =>
     s.isEmpty ? s : '${s[0].toUpperCase()}${s.substring(1)}';
 
@@ -33,62 +33,61 @@ class EntryRow extends StatelessWidget {
     onTap: onTap,
     borderRadius: BorderRadius.circular(10),
     child: Padding(
-      padding: const EdgeInsets.symmetric(vertical: 14),
+      padding: EdgeInsets.symmetric(vertical: 14),
       child: Row(
         children: [
           Container(
             width: 58,
-            padding: const EdgeInsets.symmetric(vertical: 9),
+            padding: EdgeInsets.symmetric(vertical: 9),
             decoration: BoxDecoration(
-              color: const Color(0xfff2f0ed),
-              border: Border.all(color: brandBorder.withValues(alpha: .5)),
+              color: mhpColor(context, Color(0xfff2f0ed)),
+              border: Border.all(
+                color: mhpColor(context, brandBorder).withValues(alpha: .5),
+              ),
               borderRadius: BorderRadius.circular(10),
             ),
             child: Column(
               children: [
                 Text(
                   shortDays[entry.date.weekday - 1].toUpperCase(),
-                  style: const TextStyle(fontSize: 12),
+                  style: TextStyle(fontSize: 12),
                 ),
-                Text(
-                  shortDate(entry.date),
-                  style: const TextStyle(fontSize: 12),
-                ),
+                Text(shortDate(entry.date), style: TextStyle(fontSize: 12)),
               ],
             ),
           ),
-          const SizedBox(width: 14),
+          SizedBox(width: 14),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
                   '${entry.start} – ${entry.end}',
-                  style: const TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                  ),
+                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
                 ),
                 if (entry.notes.isNotEmpty) ...[
-                  const SizedBox(height: 4),
+                  SizedBox(height: 4),
                   Text(
                     entry.notes,
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(fontSize: 12, color: brandMuted),
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: mhpColor(context, brandMuted),
+                    ),
                   ),
                 ],
               ],
             ),
           ),
-          const SizedBox(width: 8),
+          SizedBox(width: 8),
           Text(
             durationLabel(entry.netMinutes),
-            style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
+            style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
           ),
           if (onTap != null) ...[
-            const SizedBox(width: 8),
-            const Icon(Icons.chevron_right, size: 20),
+            SizedBox(width: 8),
+            Icon(Icons.chevron_right, size: 20),
           ],
         ],
       ),
@@ -141,14 +140,14 @@ class WeekChart extends StatelessWidget {
                           totals[i] == 0
                               ? '–'
                               : '${(totals[i] / 60).toStringAsFixed(totals[i] % 60 == 0 ? 0 : 1)}h',
-                          style: const TextStyle(fontSize: 12),
+                          style: TextStyle(fontSize: 12),
                         ),
-                        const SizedBox(height: 6),
+                        SizedBox(height: 6),
                         Container(
                           height: 72,
                           alignment: Alignment.bottomCenter,
                           decoration: BoxDecoration(
-                            color: const Color(0xffeeece9),
+                            color: mhpColor(context, Color(0xffeeece9)),
                             borderRadius: BorderRadius.circular(6),
                           ),
                           child: FractionallySizedBox(
@@ -162,11 +161,11 @@ class WeekChart extends StatelessWidget {
                             ),
                           ),
                         ),
-                        const SizedBox(height: 7),
+                        SizedBox(height: 7),
                         Text(
                           shortDays[i],
-                          style: const TextStyle(
-                            color: brandMuted,
+                          style: TextStyle(
+                            color: mhpColor(context, brandMuted),
                             fontSize: 12,
                           ),
                         ),

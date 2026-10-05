@@ -50,7 +50,7 @@ class _TimesheetScreenState extends State<TimesheetScreen> {
     } catch (_) {
       if (mounted) {
         setState(
-          () => failure = const ApiFailure(
+          () => failure = ApiFailure(
             'invalid_response',
             'Could not load timesheets.',
           ),
@@ -83,7 +83,7 @@ class _TimesheetScreenState extends State<TimesheetScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).hideCurrentSnackBar();
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
+          SnackBar(
             content: Text('Timesheet submitted.'),
             duration: Duration(seconds: 4),
             behavior: SnackBarBehavior.floating,
@@ -120,21 +120,19 @@ class _TimesheetScreenState extends State<TimesheetScreen> {
           ? SafeArea(
               top: false,
               child: Padding(
-                padding: const EdgeInsets.fromLTRB(22, 10, 22, 12),
+                padding: EdgeInsets.fromLTRB(22, 10, 22, 12),
                 child: submitAction,
               ),
             )
           : null,
       body: PageBody(
-        padding: const EdgeInsets.fromLTRB(22, 22, 22, 12),
+        padding: EdgeInsets.fromLTRB(22, 22, 22, 12),
         footer: keyboardOpen && showSubmit ? submitAction : null,
         children: [
-          const SizedBox(height: 12),
+          SizedBox(height: 12),
           Row(
             children: [
-              const Expanded(
-                child: Text('Weekly timesheet', style: titleStyle),
-              ),
+              Expanded(child: Text('Weekly timesheet', style: titleStyle)),
               if (workspace.canReview)
                 IconButton(
                   tooltip: review
@@ -152,13 +150,16 @@ class _TimesheetScreenState extends State<TimesheetScreen> {
                 ),
             ],
           ),
-          const SizedBox(height: 8),
+          SizedBox(height: 8),
           Row(
             children: [
               Expanded(
                 child: Text(
                   weekLabel(widget.model.week),
-                  style: const TextStyle(color: brandMuted, fontSize: 16),
+                  style: TextStyle(
+                    color: mhpColor(context, brandMuted),
+                    fontSize: 16,
+                  ),
                 ),
               ),
               StatusBadge(capitalized(status), success: status == 'approved'),
@@ -167,15 +168,12 @@ class _TimesheetScreenState extends State<TimesheetScreen> {
           ErrorNotice(failure),
           Notice(notice),
           if (loading)
-            const Padding(
-              padding: EdgeInsets.only(top: 24),
-              child: LoadingCards(),
-            )
+            Padding(padding: EdgeInsets.only(top: 24), child: LoadingCards())
           else if (review) ...[
-            const SizedBox(height: 20),
-            const SectionLabel('TEAM TIMESHEETS'),
+            SizedBox(height: 20),
+            SectionLabel('TEAM TIMESHEETS'),
             if (sheets.isEmpty)
-              const InfoPanel('No timesheets are waiting for review.'),
+              InfoPanel('No timesheets are waiting for review.'),
             for (final item in sheets)
               ListTile(
                 contentPadding: EdgeInsets.zero,
@@ -184,7 +182,7 @@ class _TimesheetScreenState extends State<TimesheetScreen> {
                 subtitle: Text(
                   '${item.weekStart} · ${capitalized(item.status)}',
                 ),
-                trailing: const Icon(Icons.chevron_right),
+                trailing: Icon(Icons.chevron_right),
                 onTap: () async {
                   await Navigator.push(
                     context,
@@ -201,16 +199,19 @@ class _TimesheetScreenState extends State<TimesheetScreen> {
                 },
               ),
           ] else ...[
-            const SizedBox(height: 18),
+            SizedBox(height: 18),
             Text(
               durationLabel(
                 sheet?.totalMinutes ?? widget.model.page?.totalMinutes ?? 0,
               ),
               style: totalStyle,
             ),
-            const Text('Total for week', style: TextStyle(color: brandMuted)),
-            const SizedBox(height: 16),
-            const Divider(),
+            Text(
+              'Total for week',
+              style: TextStyle(color: mhpColor(context, brandMuted)),
+            ),
+            SizedBox(height: 16),
+            Divider(),
             for (final entry
                 in widget.model.page?.entries ?? <HoursEntry>[]) ...[
               EntryRow(
@@ -233,35 +234,35 @@ class _TimesheetScreenState extends State<TimesheetScreen> {
                       }
                     : null,
               ),
-              const Divider(),
+              Divider(),
             ],
             if (widget.model.page?.entries.isEmpty ?? true)
-              const Padding(
+              Padding(
                 padding: EdgeInsets.symmetric(vertical: 24),
                 child: InfoPanel(
                   'Add hours to this week before submitting a timesheet.',
                 ),
               ),
-            const SizedBox(height: 24),
+            SizedBox(height: 24),
             if (canSubmit) ...[
-              const Text(
+              Text(
                 'Submission note (optional)',
                 style: TextStyle(fontSize: 14),
               ),
-              const SizedBox(height: 10),
+              SizedBox(height: 10),
               TextField(
                 controller: note,
                 enabled: !saving,
                 maxLength: 2000,
                 maxLines: 2,
-                decoration: const InputDecoration(
+                decoration: InputDecoration(
                   prefixIcon: Icon(Icons.description_outlined),
                   hintText: 'Add a note for your manager…',
                   counterText: '',
                 ),
               ),
-              const SizedBox(height: 18),
-              const InfoPanel(
+              SizedBox(height: 18),
+              InfoPanel(
                 'Your manager can review this week after you submit.',
                 success: true,
               ),
@@ -273,7 +274,7 @@ class _TimesheetScreenState extends State<TimesheetScreen> {
           if (failure != null)
             TextButton(
               onPressed: loading || saving ? null : load,
-              child: const Text('Try again'),
+              child: Text('Try again'),
             ),
         ],
       ),
@@ -336,7 +337,7 @@ class _ReviewTimesheetScreenState extends State<ReviewTimesheetScreen> {
     } catch (_) {
       if (mounted) {
         setState(
-          () => failure = const ApiFailure(
+          () => failure = ApiFailure(
             'invalid_response',
             'Could not read this timesheet. Please reload.',
           ),
@@ -359,7 +360,7 @@ class _ReviewTimesheetScreenState extends State<ReviewTimesheetScreen> {
     if (decision != 'reopened' && sheet?.status != 'submitted') return;
     if (decision == 'rejected' && note.text.trim().length < 10) {
       setState(
-        () => failure = const ApiFailure(
+        () => failure = ApiFailure(
           'review_note_required',
           'Explain the requested changes in at least 10 characters.',
         ),
@@ -408,61 +409,64 @@ class _ReviewTimesheetScreenState extends State<ReviewTimesheetScreen> {
             widget.canReview ? 'Review timesheet' : 'Weekly timesheet',
             style: titleStyle,
           ),
-          const SizedBox(height: 24),
-          if (loading) const LoadingCards(),
+          SizedBox(height: 24),
+          if (loading) LoadingCards(),
           ErrorNotice(failure),
           if (item != null) ...[
             Row(
               children: [
                 InitialAvatar(item.name ?? 'Your timesheet', size: 52),
-                const SizedBox(width: 14),
+                SizedBox(width: 14),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
                         item.name ?? 'Your timesheet',
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontWeight: FontWeight.w700,
                           fontSize: 17,
                         ),
                       ),
-                      const SizedBox(height: 4),
+                      SizedBox(height: 4),
                       Text(
                         weekLabel(DateTime.parse(item.weekStart)),
-                        style: const TextStyle(color: brandMuted, fontSize: 13),
+                        style: TextStyle(
+                          color: mhpColor(context, brandMuted),
+                          fontSize: 13,
+                        ),
                       ),
                     ],
                   ),
                 ),
-                const SizedBox(width: 8),
+                SizedBox(width: 8),
                 StatusBadge(
                   capitalized(item.status),
                   success: item.status == 'approved',
                 ),
               ],
             ),
-            const SizedBox(height: 24),
-            const Divider(),
-            const SizedBox(height: 24),
-            const SectionLabel('TOTAL HOURS'),
+            SizedBox(height: 24),
+            Divider(),
+            SizedBox(height: 24),
+            SectionLabel('TOTAL HOURS'),
             Text(durationLabel(item.totalMinutes), style: totalStyle),
-            const SizedBox(height: 18),
+            SizedBox(height: 18),
             Panel(
-              padding: const EdgeInsets.symmetric(horizontal: 14),
+              padding: EdgeInsets.symmetric(horizontal: 14),
               child: Column(
                 children: [
                   for (var i = 0; i < item.entries.length; i++) ...[
-                    if (i > 0) const Divider(),
+                    if (i > 0) Divider(),
                     Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      padding: EdgeInsets.symmetric(vertical: 14),
                       child: Row(
                         children: [
                           SizedBox(
                             width: 40,
                             child: Text(
                               shortDays[item.entries[i].date.weekday - 1],
-                              style: const TextStyle(
+                              style: TextStyle(
                                 fontSize: 14,
                                 fontWeight: FontWeight.w600,
                               ),
@@ -471,17 +475,17 @@ class _ReviewTimesheetScreenState extends State<ReviewTimesheetScreen> {
                           Expanded(
                             child: Text(
                               '${item.entries[i].start} – ${item.entries[i].end}',
-                              style: const TextStyle(
+                              style: TextStyle(
                                 fontSize: 14,
-                                color: brandMuted,
+                                color: mhpColor(context, brandMuted),
                               ),
                             ),
                           ),
                           Text(
                             durationLabel(item.entries[i].netMinutes),
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 14,
-                              color: brandMuted,
+                              color: mhpColor(context, brandMuted),
                             ),
                           ),
                         ],
@@ -493,19 +497,19 @@ class _ReviewTimesheetScreenState extends State<ReviewTimesheetScreen> {
             ),
             if (item.reviewNote != null) Notice(item.reviewNote),
             if (allowed && item.status == 'submitted') ...[
-              const SizedBox(height: 24),
-              const SectionLabel('REVIEW NOTE (OPTIONAL)'),
+              SizedBox(height: 24),
+              SectionLabel('REVIEW NOTE (OPTIONAL)'),
               TextField(
                 controller: note,
                 enabled: !saving,
                 maxLength: 2000,
                 maxLines: 2,
-                decoration: const InputDecoration(
+                decoration: InputDecoration(
                   hintText: 'Add a note…',
                   counterText: '',
                 ),
               ),
-              const SizedBox(height: 14),
+              SizedBox(height: 14),
               Row(
                 children: [
                   Expanded(
@@ -513,16 +517,16 @@ class _ReviewTimesheetScreenState extends State<ReviewTimesheetScreen> {
                       onPressed: saving || conflict || loading
                           ? null
                           : () => decide('approved'),
-                      child: const Text('Approve'),
+                      child: Text('Approve'),
                     ),
                   ),
-                  const SizedBox(width: 10),
+                  SizedBox(width: 10),
                   Expanded(
                     child: OutlinedButton(
                       style: OutlinedButton.styleFrom(
-                        side: const BorderSide(color: brandAction),
-                        padding: const EdgeInsets.symmetric(horizontal: 8),
-                        textStyle: const TextStyle(
+                        side: BorderSide(color: mhpColor(context, brandAction)),
+                        padding: EdgeInsets.symmetric(horizontal: 8),
+                        textStyle: TextStyle(
                           fontFamily: "DM Sans",
                           fontSize: 14,
                           fontWeight: FontWeight.w600,
@@ -531,7 +535,7 @@ class _ReviewTimesheetScreenState extends State<ReviewTimesheetScreen> {
                       onPressed: saving || conflict || loading
                           ? null
                           : () => decide('rejected'),
-                      child: const Text(
+                      child: Text(
                         'Request changes',
                         textAlign: TextAlign.center,
                       ),
@@ -545,13 +549,13 @@ class _ReviewTimesheetScreenState extends State<ReviewTimesheetScreen> {
                 onPressed: saving || conflict || loading
                     ? null
                     : () => decide('reopened'),
-                child: const Text('Reopen timesheet'),
+                child: Text('Reopen timesheet'),
               ),
           ],
           if (conflict || failure != null)
             TextButton(
               onPressed: loading || saving ? null : load,
-              child: const Text('Reload server version'),
+              child: Text('Reload server version'),
             ),
         ],
       ),

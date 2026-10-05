@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:timezone/data/latest.dart' as tz;
 
 import 'core/api_client.dart';
+import 'core/appearance.dart';
 import 'core/device_name.dart';
 import 'core/api_environment.dart';
 import 'core/secure_session_store.dart';
@@ -68,15 +69,19 @@ class MhpApp extends StatefulWidget {
     required this.model,
     this.deviceLabelLoader = resolveDeviceName,
     this.googleIdentity,
+    this.appearance,
   });
   final SessionModel model;
   final Future<String> Function() deviceLabelLoader;
   final GoogleIdentity? googleIdentity;
+  final AppearanceController? appearance;
   @override
   State<MhpApp> createState() => _MhpAppState();
 }
 
 class _MhpAppState extends State<MhpApp> {
+  late final appearance =
+      widget.appearance ?? AppearanceController(SecureAppearanceStore());
   final messenger = GlobalKey<ScaffoldMessengerState>();
   void showToast() {
     final message = widget.model.toast;
@@ -100,39 +105,52 @@ class _MhpAppState extends State<MhpApp> {
     super.initState();
     widget.model.addListener(showToast);
     widget.model.restore();
+    appearance.addListener(appearanceChanged);
+    appearance.load();
+  }
+
+  void appearanceChanged() {
+    if (mounted) setState(() {});
   }
 
   @override
   void dispose() {
     widget.model.removeListener(showToast);
+    appearance.removeListener(appearanceChanged);
+    if (widget.appearance == null) appearance.dispose();
     widget.model.dispose();
     super.dispose();
   }
 
   @override
-  Widget build(BuildContext context) => MaterialApp(
-    title: 'MyHoursPay',
-    scaffoldMessengerKey: messenger,
-    debugShowCheckedModeBanner: false,
-    theme: mhpTheme(),
-    builder: phoneShell,
-    home: ListenableBuilder(
-      listenable: widget.model,
-      builder: (context, _) {
-        final model = widget.model;
-        // Rebuild the navigator to discard private routes after logout or restriction.
-        final gate =
-            '${model.sessionRevision}:${model.phase}:${model.workspace?.id}';
-        return Navigator(
-          key: ValueKey(gate),
-          onGenerateRoute: (_) => MaterialPageRoute<void>(
-            builder: (_) => ListenableBuilder(
-              listenable: model,
-              builder: (context, _) => home(context, model),
+  Widget build(BuildContext context) => AppearanceScope(
+    controller: appearance,
+    child: MaterialApp(
+      title: 'MyHoursPay',
+      scaffoldMessengerKey: messenger,
+      debugShowCheckedModeBanner: false,
+      theme: mhpTheme(),
+      darkTheme: mhpTheme(dark: true),
+      themeMode: appearance.mode,
+      builder: phoneShell,
+      home: ListenableBuilder(
+        listenable: widget.model,
+        builder: (context, _) {
+          final model = widget.model;
+          // Rebuild the navigator to discard private routes after logout or restriction.
+          final gate =
+              '${model.sessionRevision}:${model.phase}:${model.workspace?.id}';
+          return Navigator(
+            key: ValueKey(gate),
+            onGenerateRoute: (_) => MaterialPageRoute<void>(
+              builder: (_) => ListenableBuilder(
+                listenable: model,
+                builder: (context, _) => home(context, model),
+              ),
             ),
-          ),
-        );
-      },
+          );
+        },
+      ),
     ),
   );
   Widget home(BuildContext context, SessionModel model) =>

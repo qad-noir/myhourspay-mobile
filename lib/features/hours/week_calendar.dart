@@ -65,15 +65,18 @@ Future<DateTime?> selectHoursDate(
     final result = await showCalendarDatePicker2Dialog(
       context: context,
       useRootNavigator: false,
-      dialogSize: const Size(360, 430),
+      dialogSize: Size(360, 430),
       value: [initialDate],
-      dialogBackgroundColor: brandSurface,
+      dialogBackgroundColor: mhpColor(context, brandSurface),
       borderRadius: BorderRadius.circular(16),
       config: CalendarDatePicker2WithActionButtonsConfig(
         firstDayOfWeek: 1,
         disableMonthPicker: true,
-        controlsTextStyle: const TextStyle(fontSize: 16, color: brandInk),
-        selectedDayHighlightColor: brandAction,
+        controlsTextStyle: TextStyle(
+          fontSize: 16,
+          color: mhpColor(context, brandInk),
+        ),
+        selectedDayHighlightColor: mhpColor(context, brandAction),
         dayBuilder:
             ({
               required date,
@@ -105,7 +108,7 @@ Future<DateTime?> selectHoursDate(
                                   decoration: BoxDecoration(
                                     color: isSelected == true
                                         ? Colors.white
-                                        : brandAction,
+                                        : mhpColor(context, brandAction),
                                     shape: BoxShape.circle,
                                   ),
                                 )
@@ -123,14 +126,14 @@ Future<DateTime?> selectHoursDate(
         children: [
           Flexible(child: dialog!),
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 24),
+            padding: EdgeInsets.symmetric(horizontal: 24),
             child: ValueListenableBuilder<String>(
               valueListenable: status,
               builder: (_, message, _) => Material(
-                color: brandSurface,
+                color: mhpColor(context, brandSurface),
                 borderRadius: BorderRadius.circular(8),
                 child: Padding(
-                  padding: const EdgeInsets.all(12),
+                  padding: EdgeInsets.all(12),
                   child: Text(message),
                 ),
               ),
