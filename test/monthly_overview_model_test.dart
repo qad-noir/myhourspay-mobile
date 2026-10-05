@@ -67,14 +67,14 @@ void main() {
     expect(model.monthly.weeks.last.targetMinutes, 2400);
   });
   test(
-    'leap February and six-row months preserve Monday-first local dates',
+    'leap February and six-row months preserve Sunday-first local dates',
     () {
       expect(monthEnd(DateTime(2024, 2)), DateTime(2024, 2, 29));
-      expect(monthCells(DateTime(2021, 2)).length, 28);
-      final cells = monthCells(DateTime(2026, 3));
+      expect(monthCells(DateTime(2021, 2)).length, 35);
+      final cells = monthCells(DateTime(2026, 5));
       expect(cells.length, 42);
-      expect(cells.first, DateTime(2026, 2, 23));
-      expect(cells.last, DateTime(2026, 4, 5));
+      expect(cells.first, DateTime(2026, 4, 26));
+      expect(cells.last, DateTime(2026, 6, 6));
     },
   );
   test('paid/unpaid breaks do not change backend net totals; worked dates are unique', () async {

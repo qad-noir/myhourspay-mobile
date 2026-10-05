@@ -11,8 +11,14 @@ DateTime fullWeeksEnd(DateTime month) {
 }
 
 List<DateTime> monthCells(DateTime month) {
-  final start = weekStart(monthStart(month));
-  final end = fullWeeksEnd(month);
+  final first = monthStart(month);
+  final last = monthEnd(month);
+  final start = DateTime(
+    first.year,
+    first.month,
+    first.day - first.weekday % 7,
+  );
+  final end = DateTime(last.year, last.month, last.day + 6 - last.weekday % 7);
   final result = <DateTime>[];
   // Calendar arithmetic, rather than 24-hour durations, preserves local dates.
   for (

@@ -792,7 +792,7 @@ class MonthCalendar extends StatelessWidget {
       children: [
         Row(
           children: [
-            for (final day in ['M', 'T', 'W', 'T', 'F', 'S', 'S'])
+            for (final day in ['S', 'M', 'T', 'W', 'T', 'F', 'S'])
               Expanded(
                 child: Center(
                   child: Text(
