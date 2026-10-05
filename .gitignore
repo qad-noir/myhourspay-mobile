@@ -52,3 +52,7 @@ app.*.map.json
 # Local integration credentials and runtime output
 /test-login/
 /.local/
+
+# Environment-specific Firebase app configuration (never service-account keys)
+/android/app/**/google-services.json
+/ios/Runner/GoogleService-Info.plist

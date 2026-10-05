@@ -1,7 +1,7 @@
 name: myhourspay
 description: "MyHoursPay companion app — native mobile companion."
 publish_to: 'none'
-version: 0.1.0+10
+version: 0.1.0+11
 
 environment:
   sdk: ^3.13.2
@@ -9,6 +9,8 @@ environment:
 dependencies:
   calendar_date_picker2: 3.0.0
   device_info_plus: 13.3.0
+  firebase_core: ^4.15.0
+  firebase_messaging: ^16.7.0
   flutter:
     sdk: flutter
   flutter_secure_storage: ^11.2.0

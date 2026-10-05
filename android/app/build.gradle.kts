@@ -4,6 +4,10 @@ plugins {
     id("dev.flutter.flutter-gradle-plugin")
 }
 
+if (file("google-services.json").exists() || file("src/release/google-services.json").exists() || file("src/debug/google-services.json").exists()) {
+    apply(plugin = "com.google.gms.google-services")
+}
+
 android {
     namespace = "com.example.myhourspay"
     compileSdk = flutter.compileSdkVersion

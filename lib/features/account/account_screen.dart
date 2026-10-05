@@ -8,6 +8,7 @@ import '../auth/google_identity.dart';
 import '../session/session_model.dart';
 import '../../core/web_account_links.dart';
 import 'account_preferences.dart';
+import '../notifications/reminder_preferences.dart';
 
 class AccountScreen extends StatefulWidget {
   const AccountScreen({super.key, required this.model});
@@ -339,6 +340,7 @@ class _AccountScreenState extends State<AccountScreen> {
               child: Text('Try again'),
             ),
           SizedBox(height: 24),
+          const ReminderPreferences(),
           InfoPanel('Your account is shared with MyHoursPay on the web.'),
           const SizedBox(height: 28),
           const SectionLabel('DELETE ACCOUNT'),

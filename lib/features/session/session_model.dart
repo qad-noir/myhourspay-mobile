@@ -578,6 +578,8 @@ class SessionModel extends ChangeNotifier {
     _notify();
   }
 
+  Future<void> Function()? beforeLogout;
+
   Future<void> logout() async {
     if (busy) return;
     busy = true;
@@ -585,6 +587,7 @@ class SessionModel extends ChangeNotifier {
     var revoked = false;
     try {
       if (auth.api.token != null) {
+        await beforeLogout?.call();
         await auth.logout();
         revoked = true;
       }

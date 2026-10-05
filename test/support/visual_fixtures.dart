@@ -56,6 +56,18 @@ SessionModel visualModel({bool longNames = false}) {
     ApiEnvironment.parse('development', 'http://fixture.invalid/api/v1/mobile'),
     transport: MockClient((request) async {
       final path = request.url.path;
+      if (path.endsWith('/hours')) {
+        final start = DateTime.parse(request.url.queryParameters['start']!);
+        final end = DateTime.parse(request.url.queryParameters['end']!);
+        return response(
+          hoursPage(
+            entries.where((entry) {
+              final date = DateTime.parse(entry['work_date'] as String);
+              return !date.isBefore(start) && !date.isAfter(end);
+            }).toList(),
+          ),
+        );
+      }
       if (path.endsWith('/projects')) {
         return response({
           'data': [
@@ -136,7 +148,7 @@ Widget visualScreen(String name, SessionModel model) => switch (name) {
     model: model,
     providerActions: {'google': () {}, 'apple': () {}},
   ),
-  'your-week' => HoursScreen(model: model),
+  'your-week' => ListenableBuilder(listenable: model, builder: (_, _) => HoursScreen(model: model)),
   'add-hours' => EditHoursScreen(
     model: model,
     initialDate: DateTime(2026, 9, 30),
