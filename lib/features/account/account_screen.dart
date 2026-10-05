@@ -18,8 +18,8 @@ class AccountScreen extends StatefulWidget {
 
 class _AccountScreenState extends State<AccountScreen> {
   final google = NativeGoogleIdentity(
-    serverClientId: String.fromEnvironment('GOOGLE_SERVER_CLIENT_ID'),
-    iosClientId: String.fromEnvironment('GOOGLE_IOS_CLIENT_ID'),
+    serverClientId: const String.fromEnvironment('GOOGLE_SERVER_CLIENT_ID'),
+    iosClientId: const String.fromEnvironment('GOOGLE_IOS_CLIENT_ID'),
   );
   Future<void> linkGoogle() async {
     final password = TextEditingController();
