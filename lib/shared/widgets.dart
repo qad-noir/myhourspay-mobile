@@ -411,6 +411,66 @@ class _SkeletonRegionState extends State<SkeletonRegion>
   }
 }
 
+bool isConnectionFailure(ApiFailure? failure) =>
+    failure != null && ['network_error', 'timeout'].contains(failure.code);
+
+class ConnectionNotice extends StatelessWidget {
+  const ConnectionNotice({
+    super.key,
+    required this.onRetry,
+    this.cached = false,
+    this.updated = '',
+    this.busy = false,
+  });
+  final VoidCallback onRetry;
+  final bool cached, busy;
+  final String updated;
+  @override
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.only(bottom: 14),
+    child: Panel(
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(Icons.wifi_off_outlined, color: mhpColor(context, brandMuted)),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Unable to connect',
+                  style: TextStyle(fontWeight: FontWeight.w700),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  'Check your Wi-Fi or mobile data, then try again.',
+                  style: TextStyle(color: mhpColor(context, brandMuted)),
+                ),
+                if (cached) ...[
+                  const SizedBox(height: 6),
+                  Text(
+                    'Showing saved values. $updated'.trim(),
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: mhpColor(context, brandMuted),
+                    ),
+                  ),
+                ],
+                TextButton.icon(
+                  onPressed: busy ? null : onRetry,
+                  icon: const Icon(Icons.refresh, size: 18),
+                  label: Text(busy ? 'Retrying...' : 'Try again'),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    ),
+  );
+}
+
 class LoadingCards extends StatelessWidget {
   const LoadingCards({super.key});
   @override

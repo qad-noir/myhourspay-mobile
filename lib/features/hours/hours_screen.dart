@@ -22,6 +22,7 @@ class HoursScreen extends StatefulWidget {
 class _HoursScreenState extends State<HoursScreen> with WidgetsBindingObserver {
   late int tab = widget.initialTab;
   bool _hasLoadedContent = false;
+  bool _openingAdjacentDate = false;
   SessionModel get model => widget.model;
   @override
   void initState() {
@@ -49,6 +50,41 @@ class _HoursScreenState extends State<HoursScreen> with WidgetsBindingObserver {
   void selectTab(int value) {
     setState(() => tab = value);
     if (value == 0) model.ensureOverview();
+  }
+
+  Future<void> openAdjacentDate(DateTime date) async {
+    final workspace = model.workspace;
+    final bearer = model.hours.api.token;
+    if (_openingAdjacentDate || workspace == null || !workspace.writable) {
+      return;
+    }
+    _openingAdjacentDate = true;
+    try {
+      final page = await model.hours.range(workspace.id, date, date);
+      if (!mounted ||
+          model.workspace?.id != workspace.id ||
+          model.hours.api.token != bearer) {
+        return;
+      }
+      await edit(
+        initialDate: date,
+        entry: page.entries
+            .where((entry) => dateKey(entry.date) == dateKey(date))
+            .firstOrNull,
+      );
+    } catch (_) {
+      if (mounted &&
+          model.workspace?.id == workspace.id &&
+          model.hours.api.token == bearer) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Could not load this date. Please try again.'),
+          ),
+        );
+      }
+    } finally {
+      _openingAdjacentDate = false;
+    }
   }
 
   Future<void> edit({HoursEntry? entry, DateTime? initialDate}) async {
@@ -214,63 +250,20 @@ class _HoursScreenState extends State<HoursScreen> with WidgetsBindingObserver {
                       onAccount: () => selectTab(accountTab),
                       onEntry: (entry) => edit(entry: entry),
                       onAddDate: (date) => edit(initialDate: date),
+                      onAdjacentDate: openAdjacentDate,
                     )
                   : hoursPending && initialPending
                   ? const HoursSkeleton()
                   : overviewPending && initialPending
                   ? const OverviewSkeleton(monthly: false)
                   : PageBody(
+                      padding: const EdgeInsets.fromLTRB(22, 16, 22, 24),
                       children: [
-                        Row(
-                          children: [
-                            Expanded(
-                              child: Align(
-                                alignment: Alignment.centerLeft,
-                                child: OutlinedButton(
-                                  onPressed: model.switchWorkspace,
-                                  child: Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      Icon(
-                                        Icons.business_outlined,
-                                        size: 19,
-                                        color: mhpColor(context, brandInk),
-                                      ),
-                                      SizedBox(width: 10),
-                                      Flexible(
-                                        child: Text(
-                                          w.name,
-                                          maxLines: 1,
-                                          overflow: TextOverflow.ellipsis,
-                                          style: TextStyle(
-                                            color: mhpColor(context, brandInk),
-                                            fontSize: 13,
-                                          ),
-                                        ),
-                                      ),
-                                      SizedBox(width: 14),
-                                      Icon(
-                                        Icons.expand_more,
-                                        size: 19,
-                                        color: mhpColor(context, brandInk),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ),
-                            ),
-                            SizedBox(width: 24),
-                            IconButton(
-                              tooltip: 'Account and devices',
-                              onPressed: () => setState(() => tab = accountTab),
-                              icon: InitialAvatar(
-                                model.account?.name ?? '',
-                                size: 38,
-                              ),
-                            ),
-                          ],
+                        OverviewHeader(
+                          model: model,
+                          onAccount: () => selectTab(accountTab),
                         ),
-                        SizedBox(height: 22),
+                        SizedBox(height: 16),
                         if (tab == 0) ...[
                           OverviewPeriodSwitch(model: model),
                           SizedBox(height: 14),
@@ -367,7 +360,16 @@ class _HoursScreenState extends State<HoursScreen> with WidgetsBindingObserver {
                           Notice(
                             'This workspace is read-only. You can view your hours.',
                           ),
-                        ErrorNotice(shownFailure),
+                        if (isConnectionFailure(shownFailure))
+                          ConnectionNotice(
+                            onRetry: tab == 0
+                                ? model.reloadOverview
+                                : model.reload,
+                            cached: shownPage != null,
+                            busy: shownLoading,
+                          )
+                        else
+                          ErrorNotice(shownFailure),
                         if (shownLoading)
                           Padding(
                             padding: EdgeInsets.only(top: 24),

@@ -278,9 +278,13 @@ void main() {
       await tester.tap(find.byTooltip('Next month'));
       await tester.pumpAndSettle();
       expect(model.monthly.month, DateTime(2026, 3));
+      final headerPosition = tester.getTopLeft(find.byType(OverviewHeader));
+      final headerSize = tester.getSize(find.byType(OverviewHeader));
       await tester.tap(find.text('Week'));
       await tester.pumpAndSettle();
       expect(model.overviewMonthly, false);
+      expect(tester.getTopLeft(find.byType(OverviewHeader)), headerPosition);
+      expect(tester.getSize(find.byType(OverviewHeader)), headerSize);
       await tester.tap(find.byTooltip('Account and devices'));
       await tester.pumpAndSettle();
       await tester.tap(find.text('Overview'));
@@ -291,6 +295,84 @@ void main() {
       expect(model.monthly.month, DateTime(2026, 3));
     },
   );
+  testWidgets(
+    'muted adjacent dates open existing or empty day without navigating periods',
+    (tester) async {
+      final model = monthModel();
+      addTearDown(model.dispose);
+      await loadFixtureMonth(model);
+      final hoursWeek = model.week;
+      await tester.pumpWidget(preview(model));
+      await tester.pumpAndSettle();
+      final adjacent = find.byKey(const ValueKey('month-day-2026-10-01'));
+      await tester.ensureVisible(adjacent);
+      final beforeColor = tester
+          .widget<Container>(
+            find
+                .descendant(of: adjacent, matching: find.byType(Container))
+                .first,
+          )
+          .decoration;
+      await tester.tap(adjacent);
+      await tester.pumpAndSettle();
+      expect(find.text('Update hours'), findsNWidgets(2));
+      expect(model.monthly.month, DateTime(2026, 9));
+      expect(model.week, hoursWeek);
+      await tester.pageBack();
+      await tester.pumpAndSettle();
+      expect(
+        tester
+            .widget<Container>(
+              find
+                  .descendant(of: adjacent, matching: find.byType(Container))
+                  .first,
+            )
+            .decoration,
+        beforeColor,
+      );
+      final empty = find.byKey(const ValueKey('month-day-2026-08-30'));
+      await tester.ensureVisible(empty);
+      await tester.tap(empty);
+      await tester.pumpAndSettle();
+      expect(find.text('Save hours'), findsOneWidget);
+      expect(find.textContaining('30 Aug'), findsOneWidget);
+      expect(model.monthly.month, DateTime(2026, 9));
+      expect(model.week, hoursWeek);
+      expect(tester.takeException(), isNull);
+    },
+  );
+  testWidgets('offline month keeps cached content with one connection notice', (
+    tester,
+  ) async {
+    var offline = false;
+    final model = monthModel(
+      client: MockClient((request) async {
+        if (offline) throw http.ClientException('offline');
+        return fixtureForRequest(request, monthFixture());
+      }),
+    );
+    addTearDown(model.dispose);
+    await loadFixtureMonth(model);
+    await tester.pumpWidget(preview(model));
+    await tester.pumpAndSettle();
+    offline = true;
+    await model.monthly.refresh();
+    await tester.pumpAndSettle();
+    expect(find.byType(ConnectionNotice), findsOneWidget);
+    expect(find.text('Unable to connect'), findsOneWidget);
+    expect(find.text('Month hours could not be refreshed.'), findsNothing);
+    expect(
+      find.text('Weekly breakdown and overtime could not be refreshed.'),
+      findsNothing,
+    );
+    expect(find.textContaining('Showing saved values.'), findsOneWidget);
+    expect(find.text('184h'), findsOneWidget);
+    offline = false;
+    await tester.tap(find.text('Try again'));
+    await tester.pumpAndSettle();
+    expect(find.byType(ConnectionNotice), findsNothing);
+    expect(tester.takeException(), isNull);
+  });
   testWidgets('read-only month explains permissions and disables add', (
     tester,
   ) async {

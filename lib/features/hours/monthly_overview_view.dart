@@ -28,6 +28,53 @@ String compactHours(int minutes) =>
     minutes % 60 == 0 ? '${minutes ~/ 60}h' : durationLabel(minutes);
 const overtimeInk = Color(0xff08664e);
 
+class OverviewHeader extends StatelessWidget {
+  const OverviewHeader({
+    super.key,
+    required this.model,
+    required this.onAccount,
+  });
+  final SessionModel model;
+  final VoidCallback onAccount;
+  @override
+  Widget build(BuildContext context) => Row(
+    children: [
+      Expanded(
+        child: InkWell(
+          onTap: model.switchWorkspace,
+          borderRadius: BorderRadius.circular(12),
+          child: Padding(
+            padding: EdgeInsets.symmetric(vertical: 8),
+            child: Row(
+              children: [
+                Image.asset(
+                  'assets/brand/brand-mark.png',
+                  width: 36,
+                  height: 36,
+                ),
+                SizedBox(width: 12),
+                Flexible(
+                  child: Text(
+                    model.workspace!.name,
+                    maxLines: 2,
+                    style: TextStyle(fontWeight: FontWeight.w700),
+                  ),
+                ),
+                Icon(Icons.expand_more, size: 20),
+              ],
+            ),
+          ),
+        ),
+      ),
+      IconButton(
+        tooltip: 'Account and devices',
+        onPressed: onAccount,
+        icon: InitialAvatar(model.account?.name ?? '', size: 38, peach: true),
+      ),
+    ],
+  );
+}
+
 class OverviewPeriodSwitch extends StatelessWidget {
   const OverviewPeriodSwitch({super.key, required this.model});
   final SessionModel model;
@@ -81,6 +128,7 @@ class MonthlyOverviewView extends StatelessWidget {
     required this.onAccount,
     required this.onEntry,
     this.onAddDate,
+    this.onAdjacentDate,
     this.initialLoading = true,
   });
   final SessionModel model;
@@ -88,6 +136,7 @@ class MonthlyOverviewView extends StatelessWidget {
   final VoidCallback onAccount;
   final ValueChanged<HoursEntry> onEntry;
   final ValueChanged<DateTime>? onAddDate;
+  final ValueChanged<DateTime>? onAdjacentDate;
   MonthlyOverviewModel get state => model.monthly;
   Future<void> pickMonth(BuildContext context) async {
     final chosen = await showDialog<DateTime>(
@@ -107,6 +156,9 @@ class MonthlyOverviewView extends StatelessWidget {
     final entry = state.selectedEntry;
     final selected = state.selectedDate!;
     final calendarReady = totals != null;
+    final connectionFailure =
+        isConnectionFailure(state.calendarFailure) ||
+        isConnectionFailure(state.weeksFailure);
     final awaitingCalendar = totals == null && state.calendarFailure == null;
     final awaitingWeeks =
         state.overtimeMinutes == null && state.weeksFailure == null;
@@ -141,46 +193,7 @@ class MonthlyOverviewView extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Row(
-                children: [
-                  Expanded(
-                    child: InkWell(
-                      onTap: model.switchWorkspace,
-                      borderRadius: BorderRadius.circular(12),
-                      child: Padding(
-                        padding: EdgeInsets.symmetric(vertical: 8),
-                        child: Row(
-                          children: [
-                            Image.asset(
-                              'assets/brand/brand-mark.png',
-                              width: 36,
-                              height: 36,
-                            ),
-                            SizedBox(width: 12),
-                            Flexible(
-                              child: Text(
-                                workspace.name,
-                                maxLines: 2,
-                                style: TextStyle(fontWeight: FontWeight.w700),
-                              ),
-                            ),
-                            Icon(Icons.expand_more, size: 20),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-                  IconButton(
-                    tooltip: 'Account and devices',
-                    onPressed: onAccount,
-                    icon: InitialAvatar(
-                      model.account?.name ?? '',
-                      size: 38,
-                      peach: true,
-                    ),
-                  ),
-                ],
-              ),
+              OverviewHeader(model: model, onAccount: onAccount),
               SizedBox(height: 16),
               Text('Your month', style: titleStyle),
               SizedBox(height: 3),
@@ -228,13 +241,22 @@ class MonthlyOverviewView extends StatelessWidget {
                 InfoPanel(
                   'This workspace is read-only. You can view entries, but cannot add or change hours.',
                 ),
-              if (state.calendarFailure != null)
+              if (connectionFailure)
+                ConnectionNotice(
+                  onRetry: state.refresh,
+                  cached: totals != null || state.overtimeMinutes != null,
+                  updated: _updatedLabel(state.snapshot),
+                  busy: state.loading,
+                ),
+              if (state.calendarFailure != null &&
+                  !isConnectionFailure(state.calendarFailure))
                 _RangeFailure(
                   title: 'Month hours could not be refreshed.',
                   failure: state.calendarFailure!,
                   onRetry: state.refresh,
                 ),
-              if (state.weeksFailure != null)
+              if (state.weeksFailure != null &&
+                  !isConnectionFailure(state.weeksFailure))
                 _RangeFailure(
                   title:
                       'Weekly breakdown and overtime could not be refreshed.',
@@ -242,6 +264,7 @@ class MonthlyOverviewView extends StatelessWidget {
                   onRetry: state.refresh,
                 ),
               if (state.stale &&
+                  !connectionFailure &&
                   (totals != null || state.overtimeMinutes != null))
                 Padding(
                   padding: EdgeInsets.only(bottom: 12),
@@ -344,6 +367,13 @@ class MonthlyOverviewView extends StatelessWidget {
                         selected: selected,
                         entries: totals?.entries ?? [],
                         available: calendarReady,
+                        onAdjacentSelect:
+                            workspace.writable &&
+                                calendarReady &&
+                                !state.loadingCalendar &&
+                                state.calendarFailure == null
+                            ? onAdjacentDate
+                            : null,
                         onSelect: calendarReady
                             ? (date) {
                                 if (dateKey(date) == dateKey(selected) &&
@@ -698,11 +728,13 @@ class MonthCalendar extends StatelessWidget {
     required this.entries,
     required this.available,
     this.onSelect,
+    this.onAdjacentSelect,
   });
   final DateTime month, today, selected;
   final List<HoursEntry> entries;
   final bool available;
   final ValueChanged<DateTime>? onSelect;
+  final ValueChanged<DateTime>? onAdjacentSelect;
   @override
   Widget build(BuildContext context) {
     final entriesByDate = {
@@ -719,7 +751,7 @@ class MonthCalendar extends StatelessWidget {
         child: Padding(
           padding: EdgeInsets.all(1.5),
           child: Semantics(
-            button: inside && onSelect != null,
+            button: inside ? onSelect != null : onAdjacentSelect != null,
             selected: active,
             label:
                 '${dateKey(date)}${isToday ? ', today' : ''}, ${!inside
@@ -731,7 +763,11 @@ class MonthCalendar extends StatelessWidget {
                     : compactHours(entry.netMinutes)}',
             child: InkWell(
               key: ValueKey('month-day-${dateKey(date)}'),
-              onTap: inside && onSelect != null ? () => onSelect!(date) : null,
+              onTap: inside
+                  ? (onSelect == null ? null : () => onSelect!(date))
+                  : (onAdjacentSelect == null
+                        ? null
+                        : () => onAdjacentSelect!(date)),
               borderRadius: BorderRadius.circular(7),
               child: Container(
                 constraints: BoxConstraints(minHeight: scale > 1.35 ? 76 : 52),
