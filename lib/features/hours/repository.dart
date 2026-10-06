@@ -30,6 +30,23 @@ class HoursRepository {
   Future<Workspace> createWorkspace(Json input) async => Workspace.fromJson(
     (await api.request('POST', '/workspaces', body: input))['data'] as Json,
   );
+  Future<Workspace> updateSettings(
+    int workspace,
+    Json body,
+    MutationKey mutation,
+  ) async {
+    final path = '/workspaces/$workspace/settings';
+    return Workspace.fromJson(
+      (await api.request(
+            'PATCH',
+            path,
+            body: body,
+            idempotencyKey: mutation.forPayload([path, body]),
+          ))['data']
+          as Json,
+    );
+  }
+
   Future<HoursPage> week(int workspace, DateTime start) async {
     return range(
       workspace,

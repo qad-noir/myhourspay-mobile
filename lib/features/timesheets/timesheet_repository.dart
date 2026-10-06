@@ -10,12 +10,14 @@ class Timesheet {
       weekStart = json['week_start'] as String,
       version = json['version'] as String,
       totalMinutes = json['total_minutes'] as int,
+      overtime = OvertimeTotals.fromJson(json),
       name = json['user_name'] as String?,
       reviewNote = json['review_note'] as String?,
       entries = (json['entries'] as List? ?? [])
           .map((e) => HoursEntry.fromJson(e as Json))
           .toList();
   final int id, totalMinutes;
+  final OvertimeTotals overtime;
   final String status, weekStart, version;
   final String? name, reviewNote;
   final List<HoursEntry> entries;

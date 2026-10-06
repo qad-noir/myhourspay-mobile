@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "MyHoursPay Native Mobile API",
-    "version": "2.0.0",
+    "version": "2.2.0",
     "description": "Implemented native routes, replacing the 0.1.0 source-inspection draft. Production URL is the deployment target, not evidence of deployment. No paid external api_access requirement. Existing feature entitlements and workspace permissions apply. See mobile-integration.md for platform setup and release limitations."
   },
   "servers": [
@@ -154,6 +154,363 @@
           }
         },
         "security": []
+      }
+    },
+    "/push/device": {
+      "get": {
+        "operationId": "getPushDevice",
+        "summary": "Read native reminder preference for this mobile session",
+        "description": "Verified native mobile:access bearer required. Free on every plan. Returns enabled=false if no registration. No registration token or hash is returned.",
+        "tags": [
+          "Workspaces"
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/PushDevice"
+                    }
+                  },
+                  "required": [
+                    "data"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthenticated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Account, verification, feature or role restriction",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Resource not found or inaccessible",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Invalid input or credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limited",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds until retry, when supplied by the throttle",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Provider or service unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "operationId": "putPushDevice",
+        "summary": "Register, rotate or disable native missing-entry reminders",
+        "description": "Strict JSON boolean. Enabling requires token; disabling must omit token. Bind to authenticated user and current mobile Sanctum session only. Replays are scoped to session and return original response. Free missing-entry push only; no email/marketing consent changes. Server stores FCM token encrypted and rebinds duplicate token hashes away from previous sessions. Account verification required.",
+        "tags": [
+          "Workspaces"
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/PushDevice"
+                    }
+                  },
+                  "required": [
+                    "data"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthenticated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Account, verification, feature or role restriction",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Resource not found or inaccessible",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Invalid input or credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limited",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds until retry, when supplied by the throttle",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Provider or service unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "Generate one UUID per logical write; reuse it only for an identical retry. Replays return the stored original success. Changed payload/path/method with the same key returns 409."
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PushDeviceInput"
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "operationId": "deletePushDevice",
+        "summary": "Unregister current mobile session push device",
+        "description": "Safe to repeat. Only current authenticated mobile session is affected. Idempotency-Key is not required. Logout, token revocation and expiry also invalidate delivery.",
+        "tags": [
+          "Workspaces"
+        ],
+        "responses": {
+          "204": {
+            "description": "Success"
+          },
+          "401": {
+            "description": "Unauthenticated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Account, verification, feature or role restriction",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Resource not found or inaccessible",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Invalid input or credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limited",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds until retry, when supplied by the throttle",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Provider or service unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
       }
     },
     "/auth/google/challenge": {
@@ -2245,6 +2602,155 @@
         }
       }
     },
+    "/workspaces/{workspace}/settings": {
+      "patch": {
+        "operationId": "updateWorkspaceSettings",
+        "summary": "Update workspace overtime settings",
+        "description": "Verified mobile access, writable workspace and owner/administrator required. UUID Idempotency-Key and settings_version are mandatory. Stale version: 409 workspace_settings_changed; reused key with different body: 409 idempotency_conflict. Invalid effective settings: 422 validation_failed. Retry uncertain requests with the exact body and key. Refresh historical summaries after success; no records are backfilled.",
+        "tags": [
+          "Workspaces"
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/Workspace"
+                    }
+                  },
+                  "required": [
+                    "data"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthenticated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Account, verification, feature or role restriction",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Resource not found or inaccessible",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Invalid input or credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limited",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds until retry, when supplied by the throttle",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Provider or service unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "workspace",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "minimum": 1
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "Generate one UUID per logical write; reuse it only for an identical retry. Replays return the stored original success. Changed payload/path/method with the same key returns 409."
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WorkspaceSettingsInput"
+              }
+            }
+          }
+        }
+      }
+    },
     "/workspaces/{workspace}/hours": {
       "get": {
         "operationId": "listHours",
@@ -3961,6 +4467,28 @@
               "clients_projects",
               "timesheet_approvals"
             ]
+          },
+          "overtime_basis": {
+            "type": "string",
+            "enum": [
+              "daily",
+              "weekly"
+            ]
+          },
+          "contracted_daily_minutes": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "minimum": 1,
+            "maximum": 1440
+          },
+          "settings_version": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
+          },
+          "can_manage_settings": {
+            "type": "boolean"
           }
         },
         "required": [
@@ -3973,7 +4501,88 @@
           "role",
           "writable",
           "timezone",
-          "features"
+          "features",
+          "overtime_basis",
+          "contracted_daily_minutes",
+          "settings_version",
+          "can_manage_settings"
+        ]
+      },
+      "PushDevice": {
+        "type": "object",
+        "properties": {
+          "enabled": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "enabled"
+        ]
+      },
+      "PushDeviceInput": {
+        "oneOf": [
+          {
+            "type": "object",
+            "properties": {
+              "enabled": {
+                "const": true
+              },
+              "platform": {
+                "type": "string",
+                "enum": [
+                  "android",
+                  "ios"
+                ]
+              },
+              "device_name": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 255
+              },
+              "token": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 4096,
+                "writeOnly": true
+              }
+            },
+            "required": [
+              "enabled",
+              "platform",
+              "device_name",
+              "token"
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "enabled": {
+                "const": false
+              },
+              "platform": {
+                "type": "string",
+                "enum": [
+                  "android",
+                  "ios"
+                ]
+              },
+              "device_name": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 255
+              }
+            },
+            "required": [
+              "enabled",
+              "platform",
+              "device_name"
+            ],
+            "not": {
+              "required": [
+                "token"
+              ]
+            }
+          }
         ]
       },
       "WorkspaceInput": {
@@ -4005,6 +4614,21 @@
             "type": "integer",
             "minimum": 60,
             "maximum": 10080
+          },
+          "contracted_daily_minutes": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "minimum": 1,
+            "maximum": 1440
+          },
+          "overtime_basis": {
+            "type": "string",
+            "enum": [
+              "daily",
+              "weekly"
+            ]
           }
         },
         "required": [
@@ -4013,7 +4637,8 @@
           "default_break_type",
           "default_break_minutes",
           "weekly_target_minutes"
-        ]
+        ],
+        "description": "Optional overtime settings default to weekly and no daily contract. Daily basis requires a positive daily contract."
       },
       "HoursInput": {
         "type": "object",
@@ -4193,6 +4818,12 @@
           "version": {
             "type": "string",
             "pattern": "^[a-f0-9]{64}$"
+          },
+          "daily_overtime_minutes": {
+            "type": [
+              "integer",
+              "null"
+            ]
           }
         },
         "required": [
@@ -4208,7 +4839,8 @@
           "workspace_id",
           "timesheet_id",
           "net_minutes",
-          "version"
+          "version",
+          "daily_overtime_minutes"
         ]
       },
       "PageMeta": {
@@ -4271,6 +4903,21 @@
           },
           "partial": {
             "type": "boolean"
+          },
+          "daily_overtime_minutes": {
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "weekly_overtime_minutes": {
+            "type": "integer"
+          },
+          "overtime_minutes": {
+            "type": "integer"
+          },
+          "overtime_formatted": {
+            "type": "string"
           }
         },
         "required": [
@@ -4284,7 +4931,11 @@
           "target_formatted",
           "variance_minutes",
           "variance_formatted",
-          "partial"
+          "partial",
+          "daily_overtime_minutes",
+          "weekly_overtime_minutes",
+          "overtime_minutes",
+          "overtime_formatted"
         ]
       },
       "HoursPage": {
@@ -4316,13 +4967,45 @@
                 "items": {
                   "$ref": "#/components/schemas/Week"
                 }
+              },
+              "overtime_basis": {
+                "type": "string",
+                "enum": [
+                  "daily",
+                  "weekly"
+                ]
+              },
+              "contracted_daily_minutes": {
+                "type": [
+                  "integer",
+                  "null"
+                ],
+                "minimum": 1,
+                "maximum": 1440
+              },
+              "daily_overtime_minutes": {
+                "type": [
+                  "integer",
+                  "null"
+                ]
+              },
+              "weekly_overtime_minutes": {
+                "type": "integer"
+              },
+              "overtime_formatted": {
+                "type": "string"
               }
             },
             "required": [
               "total_minutes",
               "total_formatted",
               "overtime_minutes",
-              "weeks"
+              "weeks",
+              "overtime_basis",
+              "contracted_daily_minutes",
+              "daily_overtime_minutes",
+              "weekly_overtime_minutes",
+              "overtime_formatted"
             ]
           }
         },
@@ -4438,6 +5121,33 @@
           },
           "total_minutes": {
             "type": "integer"
+          },
+          "overtime_basis": {
+            "type": "string",
+            "enum": [
+              "daily",
+              "weekly"
+            ]
+          },
+          "contracted_daily_minutes": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "minimum": 1,
+            "maximum": 1440
+          },
+          "daily_overtime_minutes": {
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "weekly_overtime_minutes": {
+            "type": "integer"
+          },
+          "overtime_minutes": {
+            "type": "integer"
           }
         },
         "required": [
@@ -4455,7 +5165,12 @@
           "updated_at",
           "version",
           "user_name",
-          "total_minutes"
+          "total_minutes",
+          "overtime_basis",
+          "contracted_daily_minutes",
+          "daily_overtime_minutes",
+          "weekly_overtime_minutes",
+          "overtime_minutes"
         ]
       },
       "TimesheetDetail": {
@@ -4513,6 +5228,56 @@
           "expires_at",
           "current"
         ]
+      },
+      "WorkspaceSettingsInput": {
+        "type": "object",
+        "properties": {
+          "settings_version": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
+          },
+          "weekly_target_minutes": {
+            "type": "integer",
+            "minimum": 60,
+            "maximum": 10080
+          },
+          "contracted_daily_minutes": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "minimum": 1,
+            "maximum": 1440
+          },
+          "overtime_basis": {
+            "type": "string",
+            "enum": [
+              "daily",
+              "weekly"
+            ]
+          }
+        },
+        "required": [
+          "settings_version"
+        ],
+        "anyOf": [
+          {
+            "required": [
+              "weekly_target_minutes"
+            ]
+          },
+          {
+            "required": [
+              "contracted_daily_minutes"
+            ]
+          },
+          {
+            "required": [
+              "overtime_basis"
+            ]
+          }
+        ],
+        "description": "Partial update; omitted values are preserved. Effective daily basis requires a non-null daily contract. To clear a daily contract, switch to weekly in the same request. Applies read-only overtime derivation to historical records; does not change earnings, entry or approval versions."
       }
     }
   }

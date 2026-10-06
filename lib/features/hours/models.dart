@@ -24,9 +24,23 @@ class Workspace {
       defaultBreak = json['default_break_minutes'] as int,
       paidBreak = json['default_break_type'] == 'paid',
       targetMinutes = json['weekly_target_minutes'] as int,
+      contractedDailyMinutes = json['contracted_daily_minutes'] as int?,
+      overtimeBasis = json['overtime_basis'] as String? ?? 'weekly',
+      settingsVersion = json['settings_version'] as String?,
+      canManageSettings = json['can_manage_settings'] == true,
+      settingsSupported =
+          json.containsKey('can_manage_settings') &&
+          json['settings_version'] is String &&
+          RegExp(r'^[a-f0-9]{64}$')
+              .hasMatch(json['settings_version'] as String) &&
+          json.containsKey('overtime_basis'),
       projectsEnabled = json['features']['clients_projects'] as bool,
       timesheetsEnabled = json['features']['timesheet_approvals'] as bool;
   final int id, defaultBreak, targetMinutes;
+  final int? contractedDailyMinutes;
+  final String overtimeBasis;
+  final String? settingsVersion;
+  final bool canManageSettings, settingsSupported;
   final String name, role, timezone;
   final String? currency;
   final bool writable, paidBreak, projectsEnabled, timesheetsEnabled;
@@ -53,6 +67,7 @@ class HoursEntry {
       paidBreak = json['break_type'] == 'paid',
       notes = json['notes'] as String? ?? '',
       netMinutes = json['net_minutes'] as int,
+      dailyOvertimeMinutes = json['daily_overtime_minutes'] as int?,
       version = json['version'] as String,
       projectId = nullableJsonId(json['project_id']),
       billable = json['billable'] as bool;
@@ -60,7 +75,7 @@ class HoursEntry {
   final DateTime date;
   final String start, end, notes, version;
   final bool paidBreak, billable;
-  final int? projectId;
+  final int? projectId, dailyOvertimeMinutes;
 }
 
 class HoursPage {
@@ -70,6 +85,7 @@ class HoursPage {
           .toList(),
       totalMinutes = json['summary']['total_minutes'] as int,
       overtimeMinutes = json['summary']['overtime_minutes'] as int,
+      overtime = OvertimeTotals.fromJson(json['summary'] as Json),
       lastPage = json['meta']['last_page'] as int,
       weeks = (json['summary']['weeks'] as List)
           .map((e) => HoursWeek.fromJson(e as Json))
@@ -77,6 +93,7 @@ class HoursPage {
   final List<HoursEntry> entries;
   final int totalMinutes, overtimeMinutes, lastPage;
   final List<HoursWeek> weeks;
+  final OvertimeTotals overtime;
 }
 
 class HoursWeek {
@@ -84,15 +101,45 @@ class HoursWeek {
     required this.start,
     required this.minutes,
     required this.targetMinutes,
+    this.dailyOvertimeMinutes,
+    this.weeklyOvertimeMinutes,
+    this.overtimeMinutes,
+    this.serverVariance,
   });
   HoursWeek.fromJson(Json json)
     : start = DateTime.parse(json['start'] as String),
       minutes = json['minutes'] as int,
-      targetMinutes = json['target_minutes'] as int?;
+      targetMinutes = json['target_minutes'] as int?,
+      dailyOvertimeMinutes = json['daily_overtime_minutes'] as int?,
+      weeklyOvertimeMinutes = json['weekly_overtime_minutes'] as int?,
+      overtimeMinutes = json['overtime_minutes'] as int?,
+      serverVariance = json['variance_minutes'] as int?;
   final DateTime start;
   final int minutes;
   final int? targetMinutes;
-  int? get variance => targetMinutes == null ? null : minutes - targetMinutes!;
+  final int? dailyOvertimeMinutes,
+      weeklyOvertimeMinutes,
+      overtimeMinutes,
+      serverVariance;
+  int? get variance =>
+      serverVariance ??
+      (targetMinutes == null ? null : minutes - targetMinutes!);
+}
+
+class OvertimeTotals {
+  OvertimeTotals.fromJson(Json json)
+    : basis = json['overtime_basis'] as String? ?? 'weekly',
+      dailyContract = json['contracted_daily_minutes'] as int?,
+      dailyMinutes = json['daily_overtime_minutes'] as int?,
+      weeklyMinutes =
+          json['weekly_overtime_minutes'] as int? ??
+          (json['overtime_basis'] == 'daily'
+              ? null
+              : json['overtime_minutes'] as int?),
+      selectedMinutes = json['overtime_minutes'] as int?;
+  final String basis;
+  final int? dailyContract, dailyMinutes, weeklyMinutes, selectedMinutes;
+  String get label => basis == 'daily' ? 'Daily overtime' : 'Weekly overtime';
 }
 
 class HoursDraft {
