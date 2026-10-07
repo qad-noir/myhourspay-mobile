@@ -105,6 +105,7 @@ class HoursWeek {
     this.weeklyOvertimeMinutes,
     this.overtimeMinutes,
     this.serverVariance,
+    this.partial = false,
   });
   HoursWeek.fromJson(Json json)
     : start = DateTime.parse(json['start'] as String),
@@ -113,7 +114,9 @@ class HoursWeek {
       dailyOvertimeMinutes = json['daily_overtime_minutes'] as int?,
       weeklyOvertimeMinutes = json['weekly_overtime_minutes'] as int?,
       overtimeMinutes = json['overtime_minutes'] as int?,
+      partial = json['partial'] == true,
       serverVariance = json['variance_minutes'] as int?;
+  final bool partial;
   final DateTime start;
   final int minutes;
   final int? targetMinutes;

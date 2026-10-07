@@ -211,7 +211,7 @@ void main() {
     model.monthly.selectDay(DateTime(2026, 9, 18));
     await tester.pumpWidget(preview(model, dark: true));
     await tester.pumpAndSettle();
-    final overtime = find.text('Overtime');
+    final overtime = find.text('Weekly overtime');
     final label = tester.widget<Text>(overtime);
     final card = tester.widget<Container>(
       find.ancestor(of: overtime, matching: find.byType(Container)).first,

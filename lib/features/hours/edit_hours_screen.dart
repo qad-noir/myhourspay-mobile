@@ -469,11 +469,15 @@ class _EditHoursScreenState extends State<EditHoursScreen> {
                   children: [
                     Text('Total hours', style: TextStyle(fontSize: 14)),
                     Text(
+                      'Overtime basis: ${widget.model.workspace!.overtimeBasis == 'daily' ? 'Daily' : 'Weekly'}',
+                      style: const TextStyle(fontSize: 12),
+                    ),
+                    Text(
                       durationLabel(total),
                       style: totalStyle.copyWith(fontSize: 32),
                     ),
                     Text(
-                      'Preview · confirmed when saved',
+                      'Preview · hours and selected overtime confirmed when saved',
                       style: TextStyle(
                         fontSize: 11,
                         color: mhpColor(context, brandMuted),
@@ -482,6 +486,7 @@ class _EditHoursScreenState extends State<EditHoursScreen> {
                   ],
                 ),
               ),
+              const SizedBox(height: 8),
               ErrorNotice(failure),
               if (failure?.uncertain == true)
                 Notice(

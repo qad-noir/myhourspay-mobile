@@ -470,6 +470,47 @@ class SessionModel extends ChangeNotifier {
     loadingOverview = false;
   }
 
+  Future<bool> refreshWorkspaceSettings() async {
+    final selected = workspace;
+    final bearer = auth.api.token;
+    if (selected == null || bearer == null) return false;
+    try {
+      final updated = await hours.workspaces();
+      if (auth.api.token != bearer || workspace?.id != selected.id) {
+        return false;
+      }
+      final current = updated.where((w) => w.id == selected.id).firstOrNull;
+      if (current == null) return false;
+      workspaces = updated;
+      if (current.settingsVersion != selected.settingsVersion ||
+          current.writable != selected.writable ||
+          current.canManageSettings != selected.canManageSettings) {
+        await applyWorkspaceSettings(current);
+      }
+      return true;
+    } catch (_) {
+      // Existing values remain available offline; range refresh reports errors.
+      return false;
+    }
+  }
+
+  Future<void> applyWorkspaceSettings(Workspace updated) async {
+    if (workspace?.id != updated.id || account == null) return;
+    workspace = updated;
+    workspaces = [for (final w in workspaces) w.id == updated.id ? updated : w];
+    ++_generation;
+    ++_overviewGeneration;
+    page = null;
+    _overviewPage = null;
+    _overviewLoadedWeek = null;
+    monthly.invalidateSettings(account!.id, updated);
+    _notify();
+    await reload();
+    if (week != overviewWeek) await reloadOverview();
+    if (workspace?.id == updated.id) await monthly.ensure(account!.id, updated);
+    _notify();
+  }
+
   Future<void> ensureOverview() async {
     if (overviewMonthly && workspace != null && account != null) {
       await monthly.ensure(account!.id, workspace!);

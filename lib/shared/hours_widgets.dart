@@ -1,3 +1,5 @@
+import '../features/hours/chart_allocation.dart';
+
 import 'package:flutter/material.dart';
 
 import 'widgets.dart';
@@ -101,82 +103,147 @@ class WeekChart extends StatelessWidget {
     required this.week,
     required this.entries,
     this.onDayTap,
+    this.dailyContract,
   });
   final DateTime week;
   final List<HoursEntry> entries;
   final ValueChanged<DateTime>? onDayTap;
+  final int? dailyContract;
   @override
   Widget build(BuildContext context) {
-    final totals = List.generate(
-      7,
-      (i) => entries
-          .where((e) => dateKey(e.date) == dateKey(week.add(Duration(days: i))))
-          .fold<int>(0, (v, e) => v + e.netMinutes),
+    final days = allocateDailyWeek(
+      week: week,
+      entries: entries,
+      dailyContract: dailyContract,
     );
-    final max = totals.fold<int>(480, (v, e) => e > v ? e : v);
-    return Semantics(
-      label: List.generate(
-        7,
-        (i) => '${shortDays[i]}: ${durationLabel(totals[i])}',
-      ).join(', '),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.end,
-        children: [
-          for (var i = 0; i < 7; i++)
-            Expanded(
-              child: Semantics(
-                button: onDayTap != null,
-                label:
-                    '${shortDays[i]}: ${durationLabel(totals[i])}. ${entries.any((e) => dateKey(e.date) == dateKey(week.add(Duration(days: i)))) ? 'Edit hours' : 'Add hours'}',
-                child: InkWell(
-                  onTap: onDayTap == null
-                      ? null
-                      : () => onDayTap!(week.add(Duration(days: i))),
-                  child: Padding(
-                    padding: EdgeInsets.only(right: i == 6 ? 0 : 9),
-                    child: Column(
-                      children: [
-                        Text(
-                          totals[i] == 0
-                              ? '–'
-                              : '${(totals[i] / 60).toStringAsFixed(totals[i] % 60 == 0 ? 0 : 1)}h',
-                          style: TextStyle(fontSize: 12),
-                        ),
-                        SizedBox(height: 6),
-                        Container(
-                          height: 72,
-                          alignment: Alignment.bottomCenter,
-                          decoration: BoxDecoration(
-                            color: mhpColor(context, Color(0xffeeece9)),
-                            borderRadius: BorderRadius.circular(6),
-                          ),
-                          child: FractionallySizedBox(
-                            heightFactor: totals[i] / max,
-                            widthFactor: 1,
-                            child: Container(
-                              decoration: BoxDecoration(
-                                color: brandOrange,
-                                borderRadius: BorderRadius.circular(6),
+    final maximum = days.fold<int>(
+      480,
+      (value, day) => day.total > value ? day.total : value,
+    );
+    final available = days.every((day) => day.overtime != null);
+    String description(ChartDay day) => available
+        ? '${durationLabel(day.regular)} regular, ${durationLabel(day.overtime!)} daily overtime'
+        : '${durationLabel(day.total)} logged, daily overtime not configured';
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.end,
+          children: [
+            for (var i = 0; i < days.length; i++)
+              Expanded(
+                child: Semantics(
+                  button: onDayTap != null,
+                  label:
+                      '${shortDays[i]}: ${description(days[i])}. ${entries.any((entry) => dateKey(entry.date) == dateKey(days[i].date)) ? 'Edit hours' : 'Add hours'}',
+                  child: Tooltip(
+                    message: description(days[i]),
+                    child: InkWell(
+                      onTap: onDayTap == null
+                          ? null
+                          : () => onDayTap!(days[i].date),
+                      child: Padding(
+                        padding: EdgeInsets.only(right: i == 6 ? 0 : 9),
+                        child: Column(
+                          children: [
+                            Text(
+                              days[i].total == 0
+                                  ? '–'
+                                  : '${(days[i].total / 60).toStringAsFixed(days[i].total % 60 == 0 ? 0 : 1)}h',
+                              style: const TextStyle(fontSize: 12),
+                            ),
+                            const SizedBox(height: 6),
+                            SizedBox(
+                              height: 84,
+                              child: Align(
+                                alignment: Alignment.bottomCenter,
+                                child: days[i].total == 0
+                                    ? const SizedBox.shrink()
+                                    : ClipRRect(
+                                        borderRadius: BorderRadius.circular(6),
+                                        child: SizedBox(
+                                          height: 84 * days[i].total / maximum,
+                                          width: double.infinity,
+                                          child: Column(
+                                            children: [
+                                              if (available &&
+                                                  days[i].overtime! > 0)
+                                                Expanded(
+                                                  flex: days[i].overtime!,
+                                                  child: Container(
+                                                    color: const Color(
+                                                      0xff168456,
+                                                    ),
+                                                  ),
+                                                ),
+                                              if (!available ||
+                                                  days[i].regular > 0)
+                                                Expanded(
+                                                  flex: available
+                                                      ? days[i].regular
+                                                      : days[i].total,
+                                                  child: Container(
+                                                    color: const Color(
+                                                      0xffff6b35,
+                                                    ),
+                                                  ),
+                                                ),
+                                            ],
+                                          ),
+                                        ),
+                                      ),
                               ),
                             ),
-                          ),
+                            const SizedBox(height: 7),
+                            Text(
+                              shortDays[i],
+                              style: TextStyle(
+                                color: mhpColor(context, brandMuted),
+                                fontSize: 12,
+                              ),
+                            ),
+                          ],
                         ),
-                        SizedBox(height: 7),
-                        Text(
-                          shortDays[i],
-                          style: TextStyle(
-                            color: mhpColor(context, brandMuted),
-                            fontSize: 12,
-                          ),
-                        ),
-                      ],
+                      ),
                     ),
                   ),
                 ),
               ),
-            ),
-        ],
-      ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        Wrap(
+          spacing: 16,
+          runSpacing: 6,
+          children: [
+            _legend('Regular hours', const Color(0xffff6b35)),
+            _legend('Daily overtime', const Color(0xff168456)),
+          ],
+        ),
+        const SizedBox(height: 8),
+        Text(
+          !available
+              ? 'Daily overtime not configured'
+              : 'Daily overtime shows hours above the daily contract.',
+          style: TextStyle(fontSize: 12, color: mhpColor(context, brandMuted)),
+        ),
+      ],
     );
   }
+
+  Widget _legend(String label, Color color) => Row(
+    mainAxisSize: MainAxisSize.min,
+    children: [
+      Container(
+        width: 10,
+        height: 10,
+        decoration: BoxDecoration(
+          color: color,
+          borderRadius: BorderRadius.circular(2),
+        ),
+      ),
+      const SizedBox(width: 6),
+      Text(label, style: const TextStyle(fontSize: 12)),
+    ],
+  );
 }

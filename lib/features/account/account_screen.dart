@@ -1,3 +1,5 @@
+import '../hours/workspace_settings_screen.dart';
+
 import 'package:flutter/material.dart';
 
 import '../../core/api_client.dart';
@@ -233,6 +235,24 @@ class _AccountScreenState extends State<AccountScreen> {
             title: 'Edit name, phone, or password',
             description: 'Manage your profile on the website. You may need to sign in there.',
             url: WebAccountLinks.profile,
+          ),
+          const SizedBox(height: 24),
+          const SectionLabel('WORKSPACE'),
+          ListTile(
+            contentPadding: EdgeInsets.zero,
+            leading: const Icon(Icons.tune),
+            title: const Text('Workspace overtime preferences'),
+            subtitle: Text(widget.model.workspace?.name ?? ''),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: widget.model.workspace == null
+                ? null
+                : () => Navigator.push(
+                    context,
+                    MaterialPageRoute<void>(
+                      builder: (_) =>
+                          WorkspaceSettingsScreen(model: widget.model),
+                    ),
+                  ),
           ),
           const SizedBox(height: 24),
           const SectionLabel('PREFERENCES'),

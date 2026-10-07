@@ -161,7 +161,7 @@ class MonthlyOverviewView extends StatelessWidget {
         isConnectionFailure(state.weeksFailure);
     final awaitingCalendar = totals == null && state.calendarFailure == null;
     final awaitingWeeks =
-        state.overtimeMinutes == null && state.weeksFailure == null;
+        state.weeklyOvertimeMinutes == null && state.weeksFailure == null;
     if (initialLoading && (awaitingCalendar || awaitingWeeks)) {
       return OverviewSkeleton(
         monthly: true,
@@ -301,11 +301,15 @@ class MonthlyOverviewView extends StatelessWidget {
                       ),
                       _MetricCard(
                         loading: awaitingWeeks,
-                        label: 'Overtime',
+                        label: state.overtimeBasis == 'daily'
+                            ? 'Daily overtime'
+                            : 'Weekly overtime',
                         value: state.overtimeMinutes == null
                             ? 'Unavailable'
                             : '+${compactHours(state.overtimeMinutes!)}',
-                        detail: 'Across full weeks',
+                        detail: state.overtimeBasis == 'daily'
+                            ? 'This month'
+                            : 'Full weeks touching this month',
                         icon: Icons.bar_chart,
                         color: brandGreen,
                         ink: mhpColor(context, overtimeInk),
@@ -489,6 +493,7 @@ class MonthlyOverviewView extends StatelessWidget {
                         if (i > 0) Divider(),
                         WeeklyBreakdownRow(
                           week: weekRows[i],
+                          basis: state.overtimeBasis,
                           scaleMinutes: weekRows.fold<int>(0, (largest, week) {
                             final value =
                                 week.minutes > (week.targetMinutes ?? 0)
@@ -523,7 +528,9 @@ class MonthlyOverviewView extends StatelessWidget {
                             ),
                             SizedBox(height: 4),
                             Text(
-                              'Overtime is positive weekly excess across full weeks touching this month, including days outside the month.',
+                              state.overtimeBasis == 'daily'
+                                  ? 'Daily overtime counts positive excess above the daily contract for dates in this month. Shorter days do not cancel longer days. Weekly comparison includes full weeks touching this month.'
+                                  : 'Weekly overtime counts positive excess across full weeks touching this month, including days outside the month. Daily comparison includes only dates in this month.',
                               style: TextStyle(
                                 color: mhpColor(context, brandMuted),
                                 fontSize: 13,
@@ -854,7 +861,13 @@ class MonthCalendar extends StatelessWidget {
 }
 
 class WeeklyBreakdownRow extends StatelessWidget {
-  const WeeklyBreakdownRow({super.key, required this.week, this.scaleMinutes});
+  const WeeklyBreakdownRow({
+    super.key,
+    required this.week,
+    this.scaleMinutes,
+    this.basis = 'weekly',
+  });
+  final String basis;
   final HoursWeek week;
   final int? scaleMinutes;
   String get status => week.minutes == 0
@@ -864,7 +877,7 @@ class WeeklyBreakdownRow extends StatelessWidget {
       : week.targetMinutes == 0
       ? 'Target not set'
       : week.variance! > 0
-      ? '+${compactHours(week.variance!)} overtime'
+      ? '+${compactHours(week.variance!)} ${basis == 'daily' ? 'above target' : 'overtime'}'
       : week.variance! < 0
       ? '${compactHours(-week.variance!)} below target'
       : 'On target';
@@ -895,12 +908,25 @@ class WeeklyBreakdownRow extends StatelessWidget {
               runSpacing: 4,
               children: [
                 Text(weekLabel(week.start), style: TextStyle(fontSize: 13)),
+                if (week.partial)
+                  const Tooltip(
+                    message: 'The selected dates exclude part of this week. Daily overtime uses only the selected dates.',
+                    child: Text('Partial week', style: TextStyle(fontSize: 12)),
+                  ),
                 Text(
                   compactHours(week.minutes),
                   style: TextStyle(fontWeight: FontWeight.w700),
                 ),
               ],
             ),
+            if (week.overtimeMinutes != null)
+              Text(
+                '${basis == 'daily' ? 'Daily' : 'Weekly'} overtime: ${durationLabel(week.overtimeMinutes!)}',
+                style: TextStyle(
+                  fontSize: 12,
+                  color: mhpColor(context, brandMuted),
+                ),
+              ),
             SizedBox(height: 7),
             Row(
               children: [

@@ -10,6 +10,10 @@ import 'models.dart';
 import 'edit_hours_screen.dart';
 import 'week_calendar.dart';
 import 'monthly_overview_view.dart';
+import 'overtime_preferences.dart';
+
+import 'hours_report_screen.dart';
+import '../../shared/overtime_summary.dart';
 
 class HoursScreen extends StatefulWidget {
   const HoursScreen({super.key, required this.model, this.initialTab = 0});
@@ -38,7 +42,11 @@ class _HoursScreenState extends State<HoursScreen> with WidgetsBindingObserver {
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.resumed) model.ensureOverview();
+    if (state == AppLifecycleState.resumed) {
+      model.refreshWorkspaceSettings().then((_) {
+        if (mounted) model.ensureOverview();
+      });
+    }
   }
 
   @override
@@ -133,7 +141,7 @@ class _HoursScreenState extends State<HoursScreen> with WidgetsBindingObserver {
         (model.overviewMonthly
             ? (model.monthly.totals == null &&
                       model.monthly.calendarFailure == null) ||
-                  (model.monthly.overtimeMinutes == null &&
+                  (model.monthly.weeklyOvertimeMinutes == null &&
                       model.monthly.weeksFailure == null)
             : shownPage == null && shownFailure == null);
     if ((tab == 0 || tab == 1) && !overviewPending && !hoursPending) {
@@ -328,6 +336,23 @@ class _HoursScreenState extends State<HoursScreen> with WidgetsBindingObserver {
                           Align(
                             alignment: Alignment.centerLeft,
                             child: TextButton.icon(
+                              onPressed: () => Navigator.push(
+                                context,
+                                MaterialPageRoute<void>(
+                                  builder: (_) => HoursReportScreen(
+                                    model: model,
+                                    start: shownWeek,
+                                  ),
+                                ),
+                              ),
+                              icon: const Icon(Icons.summarize_outlined),
+                              label: const Text('Hours report'),
+                            ),
+                          ),
+                        if (tab == 1)
+                          Align(
+                            alignment: Alignment.centerLeft,
+                            child: TextButton.icon(
                               onPressed: shownLoading
                                   ? null
                                   : () async {
@@ -356,6 +381,13 @@ class _HoursScreenState extends State<HoursScreen> with WidgetsBindingObserver {
                               Color(0xffeeece9),
                             ),
                           ),
+                        if (shownPage != null && !shownLoading) ...[
+                          const SizedBox(height: 16),
+                          OvertimeSummary(
+                            totals: shownPage.overtime,
+                            showComparisons: false,
+                          ),
+                        ],
                         if (!w.writable)
                           Notice(
                             'This workspace is read-only. You can view your hours.',
@@ -386,6 +418,7 @@ class _HoursScreenState extends State<HoursScreen> with WidgetsBindingObserver {
                             WeekChart(
                               week: shownWeek,
                               entries: shownPage.entries,
+                              dailyContract: shownPage.overtime.dailyContract,
                               onDayTap: w.writable
                                   ? (day) => edit(
                                       initialDate: day,
@@ -664,7 +697,10 @@ class _CreateWorkspaceScreenState extends State<CreateWorkspaceScreen> {
   final name = TextEditingController(),
       position = TextEditingController(),
       breaks = TextEditingController(text: '30'),
-      target = TextEditingController(text: '40');
+      target = TextEditingController(text: '40'),
+      dailyHours = TextEditingController(),
+      dailyMinutes = TextEditingController();
+  String basis = 'weekly';
   bool paid = false, uncertain = false;
   Map<String, List<String>> fields = {};
 
@@ -677,6 +713,11 @@ class _CreateWorkspaceScreenState extends State<CreateWorkspaceScreen> {
       'default_break_minutes': int.parse(breaks.text),
       'default_break_type': paid ? 'paid' : 'unpaid',
       'weekly_target_minutes': (double.parse(target.text) * 60).round(),
+      'overtime_basis': basis,
+      'contracted_daily_minutes': dailyContractMinutes(
+        dailyHours.text,
+        dailyMinutes.text,
+      ),
     });
     if (!mounted) return;
     if (success) {
@@ -721,6 +762,8 @@ class _CreateWorkspaceScreenState extends State<CreateWorkspaceScreen> {
     position.dispose();
     breaks.dispose();
     target.dispose();
+    dailyHours.dispose();
+    dailyMinutes.dispose();
     super.dispose();
   }
 
@@ -741,7 +784,6 @@ class _CreateWorkspaceScreenState extends State<CreateWorkspaceScreen> {
               (name, 'Workspace name', 'name'),
               (position, 'Your position', 'position'),
               (breaks, 'Default break (minutes)', 'default_break_minutes'),
-              (target, 'Weekly target (hours)', 'weekly_target_minutes'),
             ])
               Padding(
                 padding: EdgeInsets.only(bottom: 20),
@@ -758,6 +800,23 @@ class _CreateWorkspaceScreenState extends State<CreateWorkspaceScreen> {
                   onChanged: (_) => fields.remove(item.$3),
                 ),
               ),
+            OvertimePreferences(
+              weekly: target,
+              dailyHours: dailyHours,
+              dailyMinutes: dailyMinutes,
+              basis: basis,
+              enabled: !widget.model.busy && !uncertain,
+              fields: fields,
+              onBasis: (value) => setState(() {
+                basis = value;
+                fields.remove('overtime_basis');
+              }),
+              onChanged: () => setState(() {
+                fields.remove('weekly_target_minutes');
+                fields.remove('contracted_daily_minutes');
+              }),
+            ),
+            const SizedBox(height: 16),
             SwitchListTile(
               title: Text('Paid break by default'),
               value: paid,

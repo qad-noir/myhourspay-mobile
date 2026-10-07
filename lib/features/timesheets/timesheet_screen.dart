@@ -1,3 +1,5 @@
+import '../../shared/overtime_summary.dart';
+
 import 'package:flutter/material.dart';
 
 import '../../core/api_client.dart';
@@ -18,7 +20,8 @@ class TimesheetScreen extends StatefulWidget {
 
 class _TimesheetScreenState extends State<TimesheetScreen> {
   late final repository = TimesheetRepository(widget.model.auth.api);
-  late final workspace = widget.model.workspace!;
+  Workspace get workspace => widget.model.workspace!;
+  String? _settingsVersion;
   final note = TextEditingController();
   final mutation = MutationKey();
   List<Timesheet> sheets = [];
@@ -28,7 +31,17 @@ class _TimesheetScreenState extends State<TimesheetScreen> {
   @override
   void initState() {
     super.initState();
+    _settingsVersion = workspace.settingsVersion;
     load();
+  }
+
+  @override
+  void didUpdateWidget(covariant TimesheetScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (_settingsVersion != workspace.settingsVersion) {
+      _settingsVersion = workspace.settingsVersion;
+      load();
+    }
   }
 
   @override
@@ -211,6 +224,10 @@ class _TimesheetScreenState extends State<TimesheetScreen> {
               style: TextStyle(color: mhpColor(context, brandMuted)),
             ),
             SizedBox(height: 16),
+            if (sheet != null)
+              OvertimeSummary(totals: sheet.overtime)
+            else if (widget.model.page != null)
+              OvertimeSummary(totals: widget.model.page!.overtime),
             Divider(),
             for (final entry
                 in widget.model.page?.entries ?? <HoursEntry>[]) ...[
@@ -451,6 +468,8 @@ class _ReviewTimesheetScreenState extends State<ReviewTimesheetScreen> {
             SizedBox(height: 24),
             SectionLabel('TOTAL HOURS'),
             Text(durationLabel(item.totalMinutes), style: totalStyle),
+            const SizedBox(height: 12),
+            OvertimeSummary(totals: item.overtime),
             SizedBox(height: 18),
             Panel(
               padding: EdgeInsets.symmetric(horizontal: 14),

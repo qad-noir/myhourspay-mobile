@@ -80,7 +80,14 @@ class MonthlyOverviewModel {
   MonthlyTotals? get totals => snapshot?.calendar == null
       ? null
       : MonthlyTotals(snapshot!.calendar!, month);
-  int? get overtimeMinutes => snapshot?.fullWeeks?.overtimeMinutes;
+  String get overtimeBasis =>
+      snapshot?.calendar?.overtime.basis ??
+      _workspace?.overtimeBasis ??
+      'weekly';
+  int? get dailyOvertimeMinutes => snapshot?.calendar?.overtime.dailyMinutes;
+  int? get weeklyOvertimeMinutes => snapshot?.fullWeeks?.overtime.weeklyMinutes;
+  int? get overtimeMinutes =>
+      overtimeBasis == 'daily' ? dailyOvertimeMinutes : weeklyOvertimeMinutes;
   bool get loading => loadingCalendar || loadingWeeks;
   bool get stale => calendarFailure != null || weeksFailure != null;
   HoursEntry? get selectedEntry => totals?.entries
@@ -102,6 +109,11 @@ class MonthlyOverviewModel {
               start: day,
               minutes: 0,
               targetMinutes: _workspace?.targetMinutes,
+              dailyOvertimeMinutes: _workspace?.contractedDailyMinutes == null
+                  ? null
+                  : 0,
+              weeklyOvertimeMinutes: 0,
+              overtimeMinutes: 0,
             ),
       );
     }
@@ -234,6 +246,14 @@ class MonthlyOverviewModel {
       (key, _) => key != retained && key.startsWith('$user:${workspace.id}:'),
     );
     await refresh();
+  }
+
+  void invalidateSettings(int user, Workspace workspace) {
+    bind(user, workspace);
+    ++_generation;
+    _cache.removeWhere((key, _) => key.startsWith('$user:${workspace.id}:'));
+    loadingCalendar = loadingWeeks = false;
+    calendarFailure = weeksFailure = null;
   }
 
   void suspend() {
