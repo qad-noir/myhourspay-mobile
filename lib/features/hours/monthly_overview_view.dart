@@ -493,6 +493,7 @@ class MonthlyOverviewView extends StatelessWidget {
                         if (i > 0) Divider(),
                         WeeklyBreakdownRow(
                           week: weekRows[i],
+                          showPartial: false,
                           basis: state.overtimeBasis,
                           scaleMinutes: weekRows.fold<int>(0, (largest, week) {
                             final value =
@@ -866,8 +867,10 @@ class WeeklyBreakdownRow extends StatelessWidget {
     required this.week,
     this.scaleMinutes,
     this.basis = 'weekly',
+    this.showPartial = true,
   });
   final String basis;
+  final bool showPartial;
   final HoursWeek week;
   final int? scaleMinutes;
   String get status => week.minutes == 0
@@ -908,7 +911,7 @@ class WeeklyBreakdownRow extends StatelessWidget {
               runSpacing: 4,
               children: [
                 Text(weekLabel(week.start), style: TextStyle(fontSize: 13)),
-                if (week.partial)
+                if (showPartial && week.partial)
                   const Tooltip(
                     message: 'The selected dates exclude part of this week. Daily overtime uses only the selected dates.',
                     child: Text('Partial week', style: TextStyle(fontSize: 12)),
