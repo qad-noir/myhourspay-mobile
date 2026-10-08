@@ -321,13 +321,15 @@ class MonthlyOverviewView extends StatelessWidget {
                         children: [cards[0], SizedBox(height: 10), cards[1]],
                       );
                     }
-                    return Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Expanded(child: cards[0]),
-                        SizedBox(width: 12),
-                        Expanded(child: cards[1]),
-                      ],
+                    return IntrinsicHeight(
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          Expanded(child: cards[0]),
+                          SizedBox(width: 12),
+                          Expanded(child: cards[1]),
+                        ],
+                      ),
                     );
                   },
                 ),
