@@ -406,7 +406,7 @@ class _HoursScreenState extends State<HoursScreen> with WidgetsBindingObserver {
                           const SizedBox(height: 16),
                           OvertimeSummary(
                             totals: shownPage.overtime,
-                            showComparisons: true,
+                            showComparisons: tab == 0,
                             preferDaily: tab == 1,
                           ),
                         ],
