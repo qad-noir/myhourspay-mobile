@@ -78,6 +78,7 @@ class SessionModel extends ChangeNotifier {
   int _googleAttempt = 0;
   void cancelGoogleAttempt() => ++_googleAttempt;
   int sessionRevision = 0;
+  final Set<String> readOnlyNotices = {};
   bool _disposed = false;
   void _notify() {
     if (!_disposed) notifyListeners();

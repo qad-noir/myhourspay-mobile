@@ -8,12 +8,14 @@ class OvertimeSummary extends StatelessWidget {
     super.key,
     required this.totals,
     this.showSelected = true,
+    this.preferDaily = false,
     this.showComparisons = true,
     this.dailyScope = 'this week',
     this.weeklyScope = 'this week',
   });
   final OvertimeTotals totals;
   final bool showSelected;
+  final bool preferDaily;
   final bool showComparisons;
   final String dailyScope, weeklyScope;
   @override
@@ -23,14 +25,18 @@ class OvertimeSummary extends StatelessWidget {
       children: [
         if (showSelected) ...[
           Text(
-            totals.label,
+            preferDaily ? 'Daily overtime' : totals.label,
             style: const TextStyle(fontWeight: FontWeight.w700),
           ),
           const SizedBox(height: 4),
           Text(
-            totals.selectedMinutes == null
-                ? 'Unavailable'
-                : durationLabel(totals.selectedMinutes!),
+            (preferDaily ? totals.dailyMinutes : totals.selectedMinutes) == null
+                ? (preferDaily ? 'Not configured' : 'Unavailable')
+                : durationLabel(
+                    (preferDaily
+                        ? totals.dailyMinutes
+                        : totals.selectedMinutes)!,
+                  ),
             style: totalStyle.copyWith(fontSize: 24),
           ),
           if (showComparisons) const Divider(),

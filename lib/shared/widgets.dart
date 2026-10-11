@@ -559,7 +559,7 @@ String friendlyFailure(ApiFailure f) {
     return 'MHP is temporarily unavailable. Please try again shortly.';
   }
   if (f.code == 'network_error' || f.code == 'timeout') {
-    return 'Cannot connect to MHP. Check your connection and try again.';
+    return 'Cannot connect. Check your connection and try again.';
   }
   if (f.status == 409) {
     return 'This record has changed or is locked. Reload the server version before continuing.';

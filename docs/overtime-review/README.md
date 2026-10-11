@@ -110,3 +110,25 @@ Xcode and an iOS device are still needed for native testing, VoiceOver and exist
 Google/Firebase/APNs configuration. No new plugin or platform permission is added
 by this overtime implementation. No production preference or backend deployment
 is asserted by these local tests.
+
+## 2026-10-11 display adjustments
+
+Restored separate Daily/Weekly comparisons on the Overview and Daily comparison
+under recent entries. The Hours summary explicitly displays server Daily overtime
+for the selected week, rather than weekly threshold excess. A missing daily
+contract is shown as Not configured; no default contract is assumed. Weekly
+report and workspace overtime-basis settings remain server-controlled. Calendar
+cells still show logged hours only.
+
+Week navigation/refresh now precedes entries. Read-only access is explained in a
+dismissible dialog once per workspace/session and retained in Workspace
+preferences, rather than repeated across dashboard tabs. Writes remain disabled.
+Android launcher resources now use an orange background and a white clock mark,
+removing the white surround seen in the notification app badge. Android controls
+the final icon mask. The monochrome notification small icon is retained. No iOS
+configuration changes or iOS device verification were needed/performed.
+
+Validation: 23 existing dashboard/report widget checks and one targeted daily
+summary test passed; Flutter analyze reported no issues; AAPT2 compiled Android
+resources. No new APK installed in this turn. Generated build output was removed
+after validation; the prior build-17 APK was preserved in ignored .local/releases.

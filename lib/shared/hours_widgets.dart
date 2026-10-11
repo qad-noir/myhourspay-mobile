@@ -27,8 +27,14 @@ String capitalized(String s) =>
     s.isEmpty ? s : '${s[0].toUpperCase()}${s.substring(1)}';
 
 class EntryRow extends StatelessWidget {
-  const EntryRow({super.key, required this.entry, this.onTap});
+  const EntryRow({
+    super.key,
+    required this.entry,
+    this.onTap,
+    this.showDailyComparison = false,
+  });
   final HoursEntry entry;
+  final bool showDailyComparison;
   final VoidCallback? onTap;
   @override
   Widget build(BuildContext context) => InkWell(
@@ -67,6 +73,17 @@ class EntryRow extends StatelessWidget {
                   '${entry.start} – ${entry.end}',
                   style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
                 ),
+                if (showDailyComparison &&
+                    entry.dailyOvertimeMinutes != null) ...[
+                  const SizedBox(height: 4),
+                  Text(
+                    'Daily comparison +${durationLabel(entry.dailyOvertimeMinutes!)}',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: mhpColor(context, brandMuted),
+                    ),
+                  ),
+                ],
                 if (entry.notes.isNotEmpty) ...[
                   SizedBox(height: 4),
                   Text(

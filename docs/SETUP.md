@@ -12,6 +12,22 @@ never disables certificate verification and never follows API redirects.
 
 Android emulator: http://10.0.2.2:8000/api/v1/mobile.
 Host-side repository verification: http://127.0.0.1:8000/api/v1/mobile.
+
+For Chrome development, Laravel must be running independently of Flutter. In a
+second terminal in `C:/Users/HP-MC/Documents/laravel/myhourspay`, run:
+
+```powershell
+& 'C:/php-8.5/php.exe' artisan serve --host=127.0.0.1 --port=8000
+```
+
+Keep that terminal running and keep the local database service running. Flutter
+does not start Laravel. HTTP 0 / `network_error` means the browser did not obtain
+an HTTP response; check the listener, browser CORS errors, and the requested URL
+before treating it as a credentials/session error. On 2026-10-11 the local
+providers, login, me and workspaces routes returned HTTP 200 with CORS allowed
+after restarting the missing local server. This does not verify a browser UI or
+production deployment.
+
 Physical devices need a reachable LAN service or an HTTPS tunnel; device localhost
 is not the development computer. Use an HTTPS tunnel on iOS unless an explicitly
 scoped debug-only local networking exception is configured by the iOS developer.

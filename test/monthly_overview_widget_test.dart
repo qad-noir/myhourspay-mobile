@@ -373,7 +373,7 @@ void main() {
     expect(find.byType(ConnectionNotice), findsNothing);
     expect(tester.takeException(), isNull);
   });
-  testWidgets('read-only month explains permissions and disables add', (
+  testWidgets('read-only notice dismisses and does not recur across tabs', (
     tester,
   ) async {
     final model = monthModel(writable: false);
@@ -388,6 +388,13 @@ void main() {
       isNull,
     );
     expect(find.textContaining('This workspace is read-only.'), findsOneWidget);
+    await tester.tap(find.text('OK'));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('This workspace is read-only.'), findsNothing);
+    await tester.tap(find.text('Hours'));
+    await tester.pumpAndSettle();
+    expect(find.byType(AlertDialog), findsNothing);
+    expect(find.textContaining('This workspace is read-only.'), findsNothing);
   });
   for (final size in [
     const Size(360, 800),

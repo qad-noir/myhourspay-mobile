@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../shared/widgets.dart';
+import '../../shared/overtime_summary.dart';
 import '../../shared/overview_skeleton.dart';
 import '../../core/api_client.dart';
 import '../../shared/hours_widgets.dart';
@@ -237,10 +238,6 @@ class MonthlyOverviewView extends StatelessWidget {
               ),
               OverviewPeriodSwitch(model: model),
               SizedBox(height: 14),
-              if (!workspace.writable)
-                InfoPanel(
-                  'This workspace is read-only. You can view entries, but cannot add or change hours.',
-                ),
               if (connectionFailure)
                 ConnectionNotice(
                   onRetry: state.refresh,
@@ -332,6 +329,16 @@ class MonthlyOverviewView extends StatelessWidget {
                       ),
                     );
                   },
+                ),
+                SizedBox(height: 12),
+                OvertimeSummary(
+                  totals: OvertimeTotals.fromJson({
+                    'daily_overtime_minutes': state.dailyOvertimeMinutes,
+                    'weekly_overtime_minutes': state.weeklyOvertimeMinutes,
+                  }),
+                  showSelected: false,
+                  dailyScope: 'this month',
+                  weeklyScope: 'full weeks touching this month',
                 ),
                 SizedBox(height: 12),
                 _Card(

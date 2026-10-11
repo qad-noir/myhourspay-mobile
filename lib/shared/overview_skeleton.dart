@@ -123,6 +123,8 @@ class OverviewSkeleton extends StatelessWidget {
                   ],
                 ),
                 const SizedBox(height: 12),
+                block(100),
+                const SizedBox(height: 12),
                 block(50),
                 const SizedBox(height: 14),
                 Panel(

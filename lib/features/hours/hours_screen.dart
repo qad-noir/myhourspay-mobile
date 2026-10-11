@@ -131,6 +131,27 @@ class _HoursScreenState extends State<HoursScreen> with WidgetsBindingObserver {
   @override
   Widget build(BuildContext context) {
     final w = model.workspace!;
+    final accessNoticeKey = '${model.sessionRevision}:${w.id}';
+    if (!w.writable && model.readOnlyNotices.add(accessNoticeKey)) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted || model.workspace?.id != w.id) return;
+        showDialog<void>(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: const Text('Read-only workspace'),
+            content: const Text(
+              'This workspace is read-only. You can view entries, but cannot add or change hours. Review access in Workspace preferences.',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('OK'),
+              ),
+            ],
+          ),
+        );
+      });
+    }
     final shownWeek = tab == 0 ? model.overviewWeek : model.week;
     final shownPage = tab == 0 ? model.overviewData : model.page;
     final shownLoading = tab == 0 ? model.overviewLoading : model.loadingWeek;
@@ -385,13 +406,10 @@ class _HoursScreenState extends State<HoursScreen> with WidgetsBindingObserver {
                           const SizedBox(height: 16),
                           OvertimeSummary(
                             totals: shownPage.overtime,
-                            showComparisons: false,
+                            showComparisons: true,
+                            preferDaily: tab == 1,
                           ),
                         ],
-                        if (!w.writable)
-                          Notice(
-                            'This workspace is read-only. You can view your hours.',
-                          ),
                         if (isConnectionFailure(shownFailure))
                           ConnectionNotice(
                             onRetry: tab == 0
@@ -402,6 +420,35 @@ class _HoursScreenState extends State<HoursScreen> with WidgetsBindingObserver {
                           )
                         else
                           ErrorNotice(shownFailure),
+                        if (tab == 1 || shownFailure != null)
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              IconButton(
+                                tooltip: 'Previous week',
+                                onPressed: shownLoading || tab == 0
+                                    ? null
+                                    : () => model.moveWeek(-7),
+                                icon: Icon(Icons.chevron_left),
+                              ),
+                              TextButton.icon(
+                                onPressed: shownLoading
+                                    ? null
+                                    : tab == 0
+                                    ? model.reloadOverview
+                                    : model.reload,
+                                icon: Icon(Icons.refresh, size: 18),
+                                label: Text('Refresh'),
+                              ),
+                              IconButton(
+                                tooltip: 'Next week',
+                                onPressed: shownLoading || tab == 0
+                                    ? null
+                                    : () => model.moveWeek(7),
+                                icon: Icon(Icons.chevron_right),
+                              ),
+                            ],
+                          ),
                         if (shownLoading)
                           Padding(
                             padding: EdgeInsets.only(top: 24),
@@ -469,40 +516,12 @@ class _HoursScreenState extends State<HoursScreen> with WidgetsBindingObserver {
                                   : shownPage.entries)) ...[
                             EntryRow(
                               entry: e,
+                              showDailyComparison: tab == 0,
                               onTap: w.writable ? () => edit(entry: e) : null,
                             ),
                             Divider(),
                           ],
                         ],
-                        if (tab == 1 || shownFailure != null)
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              IconButton(
-                                tooltip: 'Previous week',
-                                onPressed: shownLoading || tab == 0
-                                    ? null
-                                    : () => model.moveWeek(-7),
-                                icon: Icon(Icons.chevron_left),
-                              ),
-                              TextButton.icon(
-                                onPressed: shownLoading
-                                    ? null
-                                    : tab == 0
-                                    ? model.reloadOverview
-                                    : model.reload,
-                                icon: Icon(Icons.refresh, size: 18),
-                                label: Text('Refresh'),
-                              ),
-                              IconButton(
-                                tooltip: 'Next week',
-                                onPressed: shownLoading || tab == 0
-                                    ? null
-                                    : () => model.moveWeek(7),
-                                icon: Icon(Icons.chevron_right),
-                              ),
-                            ],
-                          ),
                       ],
                     ),
             ),

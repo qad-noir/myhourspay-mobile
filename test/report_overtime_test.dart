@@ -16,6 +16,7 @@ import 'package:myhourspay/features/hours/monthly_overview_view.dart';
 import 'package:myhourspay/features/hours/repository.dart';
 import 'package:myhourspay/shared/hours_widgets.dart';
 import 'package:myhourspay/shared/widgets.dart';
+import 'package:myhourspay/shared/overtime_summary.dart';
 import 'package:timezone/data/latest.dart' as tz;
 
 import 'support/fixtures.dart';
@@ -69,6 +70,43 @@ List<Json> reportRecords() {
 }
 
 void main() {
+  testWidgets(
+    'Hours summary uses daily excess before weekly target is reached',
+    (tester) async {
+      final totals = OvertimeTotals.fromJson({
+        'overtime_basis': 'weekly',
+        'overtime_minutes': 0,
+        'weekly_overtime_minutes': 0,
+        'daily_overtime_minutes': 150,
+      });
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: OvertimeSummary(
+              totals: totals,
+              preferDaily: true,
+              showComparisons: false,
+            ),
+          ),
+        ),
+      );
+      expect(find.text('Daily overtime'), findsOneWidget);
+      expect(find.text('2h 30m'), findsOneWidget);
+      expect(find.text('0h 0m'), findsNothing);
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: OvertimeSummary(
+              totals: OvertimeTotals.fromJson({'overtime_minutes': 0}),
+              preferDaily: true,
+              showComparisons: false,
+            ),
+          ),
+        ),
+      );
+      expect(find.text('Not configured'), findsOneWidget);
+    },
+  );
   registerReportCaptures();
   testWidgets(
     'calendar shows logged hours only and keeps overtime dates compact',

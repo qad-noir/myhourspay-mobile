@@ -191,6 +191,10 @@ class _WorkspaceSettingsScreenState extends State<WorkspaceSettingsScreen> {
         children: [
           Text(current.name, style: titleStyle),
           const SizedBox(height: 20),
+          if (!current.writable)
+            const InfoPanel(
+              'This workspace is read-only. You can view entries, but cannot add or change hours.',
+            ),
           if (!current.settingsSupported)
             const InfoPanel(
               'A backend update is required before workspace overtime settings can be saved.',
